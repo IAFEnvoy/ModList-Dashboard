@@ -284,6 +284,7 @@ type TodoItem struct {
 	Type      string `json:"type"` // "bug" or "todo"
 	Title     string `json:"title"`
 	Content   string `json:"content,omitempty"`
+	Project   string `json:"project,omitempty"` // 绑定的项目/模组名（可选）
 	Resolved  bool   `json:"resolved"`
 	CreatedAt string `json:"created_at"`
 }

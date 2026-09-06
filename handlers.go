@@ -530,6 +530,10 @@ func buildModsDashboard() []ModDashboard {
 			}()
 			innerWg.Wait()
 
+			if meta.IDs.GH != "" {
+				markRepoArchived(ghInfo, meta.IDs.GH)
+			}
+
 			totalDl := cfDownloads
 			var popularity float64
 			if totalDl > 0 {
@@ -588,6 +592,10 @@ func buildSingleModDashboard(meta ModMeta) ModDashboard {
 	}()
 	wg.Wait()
 
+	if meta.IDs.GH != "" {
+		markRepoArchived(ghInfo, meta.IDs.GH)
+	}
+
 	total := cfDownloads
 	var popularity float64
 	if total > 0 {
@@ -630,7 +638,7 @@ func saveTodosUnlocked(d TodoFileData) error {
 	return os.WriteFile(todoFile, raw, 0644)
 }
 
-func updateTodoItem(id, title, content string) (TodoItem, bool, error) {
+func updateTodoItem(id, title, content string, project *string) (TodoItem, bool, error) {
 	todoMu.Lock()
 	defer todoMu.Unlock()
 	d := loadTodosUnlocked()
@@ -638,12 +646,15 @@ func updateTodoItem(id, title, content string) (TodoItem, bool, error) {
 		if d.Items[i].ID != id {
 			continue
 		}
-		if title != "" || content != "" {
+		if title != "" || content != "" || project != nil {
 			if title != "" {
 				d.Items[i].Title = title
 			}
 			if content != "" {
 				d.Items[i].Content = content
+			}
+			if project != nil {
+				d.Items[i].Project = *project
 			}
 		} else {
 			d.Items[i].Resolved = !d.Items[i].Resolved
@@ -708,12 +719,23 @@ func handleTodos(w http.ResponseWriter, r *http.Request) {
 		if per <= 0 {
 			per = 20
 		}
+		projectFilter := r.URL.Query().Get("project")
 
 		var filtered []TodoItem
 		for _, item := range d.Items {
-			if itemType == "" || item.Type == itemType {
-				filtered = append(filtered, item)
+			if itemType != "" && item.Type != itemType {
+				continue
 			}
+			if projectFilter != "" {
+				if projectFilter == "__none__" {
+					if item.Project != "" {
+						continue
+					}
+				} else if item.Project != projectFilter {
+					continue
+				}
+			}
+			filtered = append(filtered, item)
 		}
 		// Sort: unresolved first (by created_at desc), resolved last (by created_at desc)
 		sort.SliceStable(filtered, func(i, j int) bool {
@@ -751,11 +773,12 @@ func handleTodos(w http.ResponseWriter, r *http.Request) {
 		}
 		id := r.URL.Path[len("/api/todos/"):]
 		var body struct {
-			Title   string `json:"title"`
-			Content string `json:"content"`
+			Title   string  `json:"title"`
+			Content string  `json:"content"`
+			Project *string `json:"project"`
 		}
 		json.NewDecoder(r.Body).Decode(&body)
-		item, found, err := updateTodoItem(id, body.Title, body.Content)
+		item, found, err := updateTodoItem(id, body.Title, body.Content, body.Project)
 		if err != nil {
 			http.Error(w, "save failed", http.StatusInternalServerError)
 			return
@@ -798,6 +821,7 @@ func handleTodos(w http.ResponseWriter, r *http.Request) {
 			Type    string `json:"type"`
 			Title   string `json:"title"`
 			Content string `json:"content"`
+			Project string `json:"project"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil || body.Title == "" {
 			http.Error(w, "bad request", http.StatusBadRequest)
@@ -814,6 +838,7 @@ func handleTodos(w http.ResponseWriter, r *http.Request) {
 			Type:      body.Type,
 			Title:     body.Title,
 			Content:   body.Content,
+			Project:   body.Project,
 			Resolved:  false,
 			CreatedAt: time.Now().UTC().Format(time.RFC3339),
 		}

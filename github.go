@@ -461,6 +461,22 @@ func isRepoArchived(owner, repo string) bool {
 	return false
 }
 
+// markRepoArchived 根据本地模组状态为仓库内每条 Issue/PR 打上 archived 标记，
+// 使前端能立即按“已归档”过滤，无需等待 GitHub 缓存过期或手动刷新。
+func markRepoArchived(info *GitHubInfo, repoPath string) {
+	if info == nil || repoPath == "" {
+		return
+	}
+	owner, repo, ok := strings.Cut(repoPath, "/")
+	archived := ok && isRepoArchived(owner, repo)
+	for i := range info.Issues {
+		info.Issues[i].Archived = archived
+	}
+	for i := range info.PullRequests {
+		info.PullRequests[i].Archived = archived
+	}
+}
+
 // ========== GitHub Issue / PR 详情 ==========
 
 func fetchGitHubIssueDetail(owner, repo string, issueNumber int) *GitHubIssueDetail {

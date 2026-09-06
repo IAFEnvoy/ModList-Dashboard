@@ -2,6 +2,46 @@
 const TODO_PER_PAGE = 20;
 let todoBugPage = 1, todoTodoPage = 1;
 let todoBugTotal = 0, todoTodoTotal = 0;
+let todoProjectFilter = { bug: '', todo: '' };
+
+function todoProjectOptions() {
+  if (typeof state === 'undefined' || !state.mods) return [];
+  const seen = {};
+  const names = [];
+  (state.mods || []).forEach(m => {
+    if (m && m.name && !seen[m.name]) { seen[m.name] = true; names.push(m.name); }
+  });
+  return names.sort();
+}
+
+function todoProjectOptionsHtml(selected) {
+  return todoProjectOptions().map(p => `<option value="${esc(p)}"${p === selected ? ' selected' : ''}>${esc(p)}</option>`).join('');
+}
+
+function todoProjectOptionsHtmlFull(selected) {
+  const opts = todoProjectOptions();
+  const html = opts.map(p => `<option value="${esc(p)}"${p === selected ? ' selected' : ''}>${esc(p)}</option>`).join('');
+  if (!selected || opts.indexOf(selected) !== -1) return html;
+  return `<option value="${esc(selected)}" selected>${esc(selected)}</option>${html}`;
+}
+
+function todoProjectSelectOptions() {
+  return todoProjectOptionsHtml('');
+}
+
+function todoProjectFilterRow(type) {
+  const cur = todoProjectFilter[type] || '';
+  return `
+    <div class="todo-filter-row">
+      <span class="todo-filter-label">📦</span>
+      <select class="todo-project-filter" id="todoProjectFilter_${type}">
+        <option value=""${cur === '' ? ' selected' : ''}>${t('todoProjectAll')}</option>
+        <option value="__none__"${cur === '__none__' ? ' selected' : ''}>${t('todoProjectUnbound')}</option>
+        ${todoProjectOptionsHtml(cur !== '' && cur !== '__none__' ? cur : '')}
+      </select>
+    </div>
+  `;
+}
 
 function todoAuthHeaders() {
   const token = localStorage.getItem('modlist_token');
@@ -24,6 +64,13 @@ function todoAddCard(type) {
     <div class="todo-add-card" id="todoAddCard_${type}">
       <input type="text" class="todo-add-title" id="todoTitle_${type}" placeholder="${t('todoAddTitle')}" maxlength="200">
       <textarea class="todo-add-content" id="todoContent_${type}" placeholder="${t('todoAddContent')}" rows="2"></textarea>
+      <div class="todo-add-project-row">
+        <span class="todo-project-label">📦 ${t('todoProject')}</span>
+        <select id="todoProject_${type}" class="todo-add-project">
+          <option value="">${t('todoProjectNone')}</option>
+          ${todoProjectSelectOptions()}
+        </select>
+      </div>
       <div class="todo-add-actions">
         <button class="todo-add-submit" id="todoSubmit_${type}">${t('todoAdd')}</button>
         <button class="todo-add-cancel" id="todoCancel_${type}">${t('todoCancel')}</button>
@@ -46,12 +93,14 @@ async function renderTodosSection() {
     <div class="todos-panel">
       <div class="todo-column" id="todoBugCol">
         <h3><span data-i18n="knownBugs">已知Bug</span><span class="todo-count" id="todoBugCount"></span>${isLoggedIn ? `<span class="todo-add-btn-wrap" id="todoAddBtnWrap_bug">${todoAddBtn('bug')}</span>` : ''}</h3>
+        ${todoProjectFilterRow('bug')}
         <div class="todo-add-slot" id="todoAddSlot_bug"></div>
         <div class="todo-list" id="todoBugList"></div>
         <div class="todo-pagination" id="todoBugPag"></div>
       </div>
       <div class="todo-column" id="todoTodoCol">
         <h3><span data-i18n="todoItems">TODO</span><span class="todo-count" id="todoTodoCount"></span>${isLoggedIn ? `<span class="todo-add-btn-wrap" id="todoAddBtnWrap_todo">${todoAddBtn('todo')}</span>` : ''}</h3>
+        ${todoProjectFilterRow('todo')}
         <div class="todo-add-slot" id="todoAddSlot_todo"></div>
         <div class="todo-list" id="todoTodoList"></div>
         <div class="todo-pagination" id="todoTodoPag"></div>
@@ -67,11 +116,26 @@ async function renderTodosSection() {
     bindTodoAdd('bug');
     bindTodoAdd('todo');
   }
+  bindTodoProjectFilters();
+}
+
+function bindTodoProjectFilters() {
+  ['bug', 'todo'].forEach(type => {
+    const sel = document.querySelector('#todoProjectFilter_' + type);
+    if (!sel) return;
+    sel.addEventListener('change', () => {
+      todoProjectFilter[type] = sel.value;
+      if (type === 'bug') todoBugPage = 1;
+      else todoTodoPage = 1;
+      loadTodoList(type, 1);
+    });
+  });
 }
 
 async function loadTodoList(type, page) {
   try {
-    const r = await fetch(`/api/todos?type=${type}&page=${page}&per=${TODO_PER_PAGE}`);
+    const projFilter = todoProjectFilter[type] || '';
+    const r = await fetch(`/api/todos?type=${type}&page=${page}&per=${TODO_PER_PAGE}${projFilter ? '&project=' + encodeURIComponent(projFilter) : ''}`);
     const data = await r.json();
     const items = data.items || [];
     const total = data.total || 0;
@@ -96,7 +160,12 @@ async function loadTodoList(type, page) {
           <div class="todo-text">
             <span class="todo-title">${esc(item.title)}</span>
             ${item.content ? `<span class="todo-content">${esc(item.content)}</span>` : ''}
+            ${!isLoggedIn && item.project ? `<span class="todo-project-chip" title="${t('todoProject')}: ${esc(item.project)}">📦 ${esc(item.project)}</span>` : ''}
           </div>
+          ${isLoggedIn ? `<select class="todo-project-select" data-project-id="${item.id}" title="${t('todoProjectEdit')}">
+            <option value=""${item.project ? '' : ' selected'}>📦 ${t('todoProjectNone')}</option>
+            ${todoProjectOptionsHtmlFull(item.project)}
+          </select>` : ''}
           ${isLoggedIn ? `<button class="todo-delete" data-del-id="${item.id}">×</button>` : ''}
         </div>
       `).join('');
@@ -134,6 +203,11 @@ async function loadTodoList(type, page) {
           makeTodoEditable(span, type, page);
         });
       });
+      listEl.querySelectorAll('.todo-project-select').forEach(sel => {
+        sel.addEventListener('change', async () => {
+          await todoSetProject(sel.dataset.projectId, type, page, sel.value);
+        });
+      });
     }
 
     pagEl.querySelectorAll('button').forEach(btn => {
@@ -160,6 +234,7 @@ function bindTodoAdd(type) {
 
     const titleEl = slot.querySelector('#todoTitle_' + type);
     const contentEl = slot.querySelector('#todoContent_' + type);
+    const projectEl = slot.querySelector('#todoProject_' + type);
     const submitBtn = slot.querySelector('#todoSubmit_' + type);
     const cancelBtn = slot.querySelector('#todoCancel_' + type);
 
@@ -169,11 +244,12 @@ function bindTodoAdd(type) {
       const title = titleEl.value.trim();
       if (!title) return;
       const content = contentEl.value.trim();
+      const project = projectEl ? projectEl.value : '';
       try {
         const r = await fetch('/api/todos', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', ...todoAuthHeaders() },
-          body: JSON.stringify({ type, title, content }),
+          body: JSON.stringify({ type, title, content, project }),
         });
         if (r.ok) {
           slot.innerHTML = '';
@@ -198,6 +274,21 @@ async function todoToggle(id, type, page) {
     if (r.ok) {
       await loadTodoList(type, page);
       await fetchTodoCounts();
+    }
+  } catch (e) { /* ignore */ }
+}
+
+async function todoSetProject(id, type, page, project) {
+  try {
+    const r = await fetch(`/api/todos/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', ...todoAuthHeaders() },
+      body: JSON.stringify({ project: project || '' }),
+    });
+    if (r.ok) {
+      await loadTodoList(type, page);
+    } else if (r.status === 401) {
+      alert(t('loginRequired'));
     }
   } catch (e) { /* ignore */ }
 }
