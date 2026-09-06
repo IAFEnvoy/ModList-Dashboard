@@ -2,6 +2,8 @@
 
 一个本地运行的 Minecraft 个人模组管理看板：模组元数据、Logo、维护难度与版本支持矩阵保存在 SQLite 中；首页展示 CurseForge/GitHub 统计数据；内置可选的 AI Agent 面板（聊天 + MCP 工具）。
 
+完整文档（功能、技术栈、数据存储结构）：<https://docs.iafenvoy.com/docs/tool/dashboard>
+
 ## 功能
 
 - 模组库管理：编辑元数据、上传 Logo、标签、架构、许可证、各版本加载器支持矩阵

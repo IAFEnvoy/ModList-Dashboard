@@ -2,6 +2,8 @@
 
 A local web dashboard for managing a personal Minecraft mod collection. It keeps mod metadata, logos, maintenance difficulty and support-version records in SQLite, shows CurseForge/GitHub statistics on the homepage, and ships with an optional AI agent panel (chat + MCP tools).
 
+Full documentation (features, tech stack, storage layout): <https://docs.iafenvoy.com/docs/tool/dashboard>
+
 ## Features
 
 - Mod library management: edit metadata, upload logos, tags, architecture, licenses, per-version loader support matrix
