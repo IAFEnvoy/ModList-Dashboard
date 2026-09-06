@@ -1,0 +1,32 @@
+# 模组看板基本配置
+server:
+  port: 3456
+  cache_ttl_minutes: 90
+  cache_dir: cache
+
+# 数据源开关（false 时跳过拉取，保留已有数据不动）
+datasources:
+  curseforge:
+    enabled: true
+    concurrency: 5
+  github:
+    enabled: true
+    concurrency: 5
+
+retry:
+  max_attempts: 3 # 最大尝试次数（含首次）
+  base_delay_ms: 1000 # 首次重试等待毫秒数，后续指数倍增
+
+ignore_archived: true # 是否忽略已归档 repo 的 Issue/PR 统计
+
+# Agent 项目工作目录（git clone/浏览本地模组项目用）
+# 留空则使用当前工作目录
+project_paths: []
+
+# Codacy 代码质量分析（需在 auth.yml 配置 api_token 才启用）
+codacy:
+  enabled: true
+  concurrency: 2
+  cache_ttl_hours: 24
+  provider: "gh"
+  add_wait_minutes: 10

@@ -1,0 +1,16 @@
+# MCP 服务器列表
+# stdio 类型通过 npx/node 启动（需安装 Node.js）；streamableHttp 直接连接 URL
+# 首次启动默认为空，避免未配置令牌时自动拉起外部进程
+
+servers: []
+
+# 参考示例（取消注释并填入你的配置）：
+# servers:
+#   - id: "github-mcp"
+#     name: "GitHub"
+#     type: "stdio"
+#     command: "npx"
+#     args: ["-y", "@modelcontextprotocol/server-github"]
+#     env:
+#       GITHUB_PERSONAL_ACCESS_TOKEN: "${GITHUB_PERSONAL_ACCESS_TOKEN}"
+#     description: "操作 GitHub Issues、PRs、仓库、搜索代码等"

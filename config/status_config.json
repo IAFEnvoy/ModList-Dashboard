@@ -1,0 +1,13 @@
+{
+  "order": [
+    "Maintaining",
+    "Developing",
+    "Rewrite Queued",
+    "Low Priority",
+    "End Support",
+    "Not Release Yet"
+  ],
+  "archived": [
+    "End Support"
+  ]
+}

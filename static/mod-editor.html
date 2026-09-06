@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>模组元数据编辑</title>
+  <link rel="icon" type="image/webp" href="/favicon.webp">
+  <link rel="stylesheet" href="/css/base.css">
+  <link rel="stylesheet" href="/css/mod-editor.css">
+</head>
+
+<body class="mod-editor-page">
+  <header class="mod-editor-topbar">
+    <div>
+      <div class="mod-editor-eyebrow">IAFEnvoy's Mods Dashboard</div>
+      <h1>模组元数据</h1>
+    </div>
+    <div class="mod-editor-top-actions">
+      <span id="modEditorUser" class="mod-editor-user"></span>
+      <a class="mod-editor-back" href="/">返回看板</a>
+      <button id="modEditorLogout" class="mod-editor-back" type="button">退出登录</button>
+    </div>
+  </header>
+
+  <main id="modEditorApp" class="mod-editor-layout" hidden>
+    <aside class="mod-editor-sidebar">
+      <div class="mod-editor-sidebar-head">
+        <div>
+          <h2>模组列表</h2>
+          <span id="modEditorCount"></span>
+        </div>
+        <button id="modEditorNew" class="mod-editor-primary" type="button">新建</button>
+      </div>
+      <input id="modEditorSearch" class="mod-editor-search" type="search" placeholder="搜索名称或 ID">
+      <div id="modEditorList" class="mod-editor-list"></div>
+    </aside>
+
+    <section class="mod-editor-main">
+      <div class="mod-editor-main-head">
+        <h2 id="modEditorTitle">选择一个模组</h2>
+        <button class="mod-editor-primary mod-editor-save" type="submit" form="modEditorForm">保存元数据</button>
+      </div>
+
+      <form id="modEditorForm" class="mod-editor-form" novalidate autocomplete="off">
+        <section class="mod-editor-section">
+          <h3>基本信息</h3>
+          <div class="mod-editor-grid">
+            <label><span class="mod-editor-label-text">ID<span class="mod-editor-required" aria-hidden="true">*</span></span><input id="modEditId" required pattern="[A-Za-z0-9._-]+" autocomplete="off" spellcheck="false"></label>
+            <label><span class="mod-editor-label-text">名称<span class="mod-editor-required" aria-hidden="true">*</span></span><input id="modEditName" required autocomplete="off" spellcheck="false"></label>
+            <label class="mod-editor-logo-field"><span class="mod-editor-label-text">Logo<span class="mod-editor-required" aria-hidden="true">*</span></span>
+              <span class="mod-editor-logo-picker">
+                <img id="modEditLogoPreview" class="mod-editor-logo-preview" alt="" hidden>
+                <span class="mod-editor-logo-actions">
+                  <button type="button" id="modEditLogoBtn" class="mod-editor-secondary mod-editor-logo-btn">选择图片</button>
+                  <span id="modEditLogoName" class="mod-editor-logo-name"></span>
+                  <input type="file" id="modEditLogoFile" accept="image/*" hidden>
+                  <input type="hidden" id="modEditLogo">
+                </span>
+              </span>
+            </label>
+            <label><span class="mod-editor-label-text">状态<span class="mod-editor-required" aria-hidden="true">*</span></span><select id="modEditStatus" required autocomplete="off"></select></label>
+            <label class="mod-editor-wide"><span class="mod-editor-label-text">描述<span class="mod-editor-required" aria-hidden="true">*</span></span><textarea id="modEditDescription" rows="3" required autocomplete="off" spellcheck="false"></textarea></label>
+          </div>
+        </section>
+
+        <section class="mod-editor-section">
+          <h3>平台与项目</h3>
+          <div class="mod-editor-grid">
+            <label>GitHub 仓库<input id="modEditGH" placeholder="owner/repository" autocomplete="off" spellcheck="false"></label>
+            <label>CurseForge ID<input id="modEditCF" autocomplete="off"></label>
+            <label>Wiki URL<input id="modEditWiki" autocomplete="off" spellcheck="false"></label>
+            <label>Java 包名<input id="modEditPackage" autocomplete="off" spellcheck="false"></label>
+            <label>许可证<span class="mod-editor-suggest"><input id="modEditLicense" placeholder="从下拉选择，或输入自定义值" autocomplete="off" spellcheck="false"></span></label>
+            <label class="mod-editor-wide" for="modEditArchPick">架构（可多选：下拉选择或手动输入后回车）
+              <span class="mod-editor-picker">
+                <span id="modEditArchChips" class="mod-editor-chips"></span>
+                <input id="modEditArchPick" class="mod-editor-pick" placeholder="选择或输入后按回车添加" autocomplete="off" spellcheck="false">
+                <input type="hidden" id="modEditArch">
+              </span>
+            </label>
+            <label class="mod-editor-wide" for="modEditTagsPick">标签（可多选：下拉选择或手动输入后回车）
+              <span class="mod-editor-picker">
+                <span id="modEditTagsChips" class="mod-editor-chips"></span>
+                <input id="modEditTagsPick" class="mod-editor-pick" placeholder="选择或输入后按回车添加" autocomplete="off" spellcheck="false">
+                <input type="hidden" id="modEditTags">
+              </span>
+            </label>
+            <label class="mod-editor-wide" for="modEditCoopPick">合作作者（可多选：GitHub 用户名，输入后回车）
+              <span class="mod-editor-picker">
+                <span id="modEditCoopChips" class="mod-editor-chips"></span>
+                <input id="modEditCoopPick" class="mod-editor-pick" placeholder="输入 GitHub 用户名后按回车添加" autocomplete="off" spellcheck="false">
+                <input type="hidden" id="modEditCoop">
+              </span>
+            </label>
+          </div>
+        </section>
+
+        <section class="mod-editor-section">
+          <div class="mod-editor-section-head">
+            <h3>版本兼容性</h3>
+            <button id="modEditorAddVersion" class="mod-editor-secondary" type="button">添加版本</button>
+          </div>
+          <p class="mod-editor-help">每个版本一行：填写 Minecraft 版本，并为各加载器选择支持状态。可自行增加或删除行，至少保留一行。</p>
+          <div class="mod-editor-version-scroll">
+            <div id="modEditVersionHead" class="mod-editor-version-head"></div>
+            <div id="modEditVersionsRows" class="mod-editor-version-rows"></div>
+          </div>
+        </section>
+
+        <div class="mod-editor-form-actions">
+          <button id="modEditorDelete" class="mod-editor-danger" type="button" disabled>删除模组</button>
+        </div>
+      </form>
+    </section>
+  </main>
+
+  <div id="modEditorMessage" class="mod-editor-toast" role="status" hidden></div>
+  <div id="modEditorLoading" class="mod-editor-state">正在加载...</div>
+  <div id="modEditorError" class="mod-editor-state mod-editor-state-error" hidden></div>
+  <script src="/js/mod-editor-page.js"></script>
+</body>
+
+</html>

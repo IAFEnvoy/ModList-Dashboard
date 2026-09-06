@@ -1,0 +1,20 @@
+# 构建产物
+*.exe
+*.exe~
+modlist-dashboard
+
+# 运行时数据与缓存（数据库、会话、用户上传内容、MCP 缓存）
+cache
+data
+sessions
+
+# 本地密钥/环境配置：config/ 下所有 *.yml 均不入库
+# 首次启动会自动从同目录 *.yml.example 模板生成缺失文件
+*.yml
+.env
+.env.*
+*.key
+*.pem
+
+# 第三方依赖（由 go.sum 锁定版本，可按需 vendoring）
+vendor

@@ -1,0 +1,56 @@
+{
+    "colors": {
+        "version": "yellowgreen",
+        "loader": {
+            "Fabric": "#dad1b4",
+            "Forge": "darkslategray",
+            "NeoForge": "orange"
+        },
+        "status": {
+            "Not Release Yet": "pink",
+            "Developing": "aqua",
+            "Maintaining": "green",
+            "Rewrite Queued": "darkcyan",
+            "Low Priority": "magenta",
+            "End Support": "red"
+        },
+        "coop": "purple"
+    },
+    "icons": {
+        "versions": {
+            "": {},
+            "All": {
+                "emoji": "✅",
+                "text": "Fully Supported"
+            },
+            "Partly": {
+                "emoji": "🚧",
+                "text": "Partly Supported"
+            },
+            "Planned": {
+                "emoji": "🔲",
+                "text": "Planned Supported"
+            },
+            "BugFix": {
+                "emoji": "🐛",
+                "text": "Bug Fix Only"
+            },
+            "Ended": {
+                "emoji": "🔚",
+                "text": "Ended Supported"
+            },
+            "None": {
+                "emoji": "❌",
+                "text": "No Support Planned"
+            }
+        }
+    },
+    "misc": {
+        "ignoredInSupportedVersions": [
+            "",
+            "Planned",
+            "None"
+        ],
+        "versionConnector": "~"
+    }
+}

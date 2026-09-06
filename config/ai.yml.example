@@ -1,0 +1,19 @@
+# AI 提供商配置 - 每个 provider 可提供多个模型
+# 前端引用格式: {provider_id}/{model_id}  例如 deepseek/deepseek-chat
+# API Key 可直接填写，也可用 ${ENV_NAME} 从环境变量读取
+
+providers:
+  - id: "deepseek"
+    name: "DeepSeek"
+    type: "deepseek"
+    base_url: "https://api.deepseek.com"
+    api_key: "${DEEPSEEK_API_KEY}"
+    models:
+      - id: "deepseek-chat"
+        name: "DeepSeek Chat"
+        max_tokens: 8192
+        max_context_length: 64000
+        thinking_enabled: false
+
+# 默认使用的模型 (provider_id/model_id)
+default_model: "deepseek/deepseek-chat"

@@ -1,0 +1,37 @@
+# 模组编辑器的预填选项（下拉可选，也可手动输入）
+license_options:
+  - All Rights Reserved
+  - GPL-3.0
+  - LGPL-3.0
+  - LGPL-2.1
+  - Apache-2.0
+  - MIT
+
+architecture_options:
+  - ModDevGradle
+  - Stonecutter
+  - Fabric-Loom
+  - Architectury-Loom
+
+tag_options:
+  - Addon
+  - Adventure and RPG
+  - Automation
+  - Bug Fixes
+  - Cosmetic
+  - Energy
+  - Farming
+  - Food
+  - Information
+  - KubeJS
+  - Library
+  - Magic
+  - Mobs
+  - Ores and Resources
+  - Performance
+  - Server Utility
+  - Storage
+  - Structures
+  - Technology
+  - Utility & QoL
+  - World Gen

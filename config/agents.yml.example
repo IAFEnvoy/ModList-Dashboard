@@ -1,0 +1,45 @@
+# Agent 列表
+# mcps 字段统一管理所有工具来源：
+#   内置: read_only, read_write, web, todo, ask, shell, drive
+#   外部: MCP 服务器 ID（配置在 mcps.yml）
+agents:
+  - id: "assistant"
+    name: "通用助手"
+    description: "通用 AI 助手，可查询资料、阅读代码、回答问题、执行各类通用任务"
+    max_instances: 3
+    temperature: 0.7
+    sub_agents: ["bug-fixer", "code-reviewer", "mc-modder", "tester"]
+    mcps: ["read_only", "read_write", "web", "todo", "ask", "shell"]
+    agent_md_file: "prompts/assistant.md"
+
+  - id: "mc-modder"
+    name: "模组开发助手"
+    description: "根据需求从零开发新的 Minecraft 模组，创建项目骨架、编写代码并构建验证"
+    max_instances: 2
+    temperature: 0.5
+    mcps: ["read_only", "read_write", "web", "todo", "ask", "shell"]
+    agent_md_file: "prompts/mc-modder.md"
+
+  - id: "bug-fixer"
+    name: "Bug 修复助手"
+    description: "读取 Issue/TODO，分析附件日志，定位代码根本原因并进行精确修复"
+    max_instances: 2
+    temperature: 0.3
+    mcps: ["read_only", "read_write", "web", "todo", "ask", "shell"]
+    agent_md_file: "prompts/bug-fixer.md"
+
+  - id: "code-reviewer"
+    name: "代码审查助手"
+    description: "审查本地代码和 PR diff，输出结构化审查意见（严重/建议/风格）"
+    max_instances: 2
+    temperature: 0.4
+    mcps: ["read_only", "read_write", "web", "todo", "ask", "shell"]
+    agent_md_file: "prompts/code-reviewer.md"
+
+  - id: "tester"
+    name: "测试助手"
+    description: "使用 Pendulum 框架进行模组自动化测试（单例运行）"
+    max_instances: 1
+    temperature: 0.3
+    mcps: ["read_only", "read_write", "todo", "ask", "shell"]
+    agent_md_file: "prompts/tester.md"

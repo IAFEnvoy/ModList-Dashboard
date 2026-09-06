@@ -1,0 +1,722 @@
+﻿/* ========== GitHub Panel ========== */
+.github-panel {
+  flex: 1;
+  min-height: 0;
+  max-width: 1400px;
+  align-self: center;
+  width: 100%;
+  padding: 0 32px 32px;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+}
+
+.panel-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 20px;
+  font-size: 1rem;
+  font-weight: 600;
+  border-bottom: 1px solid var(--border);
+}
+
+.github-tabs {
+  display: flex;
+  gap: 2px;
+  padding: 8px 20px;
+  background: #f9fafb;
+}
+
+.gh-tab {
+  padding: 6px 16px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.gh-tab.active {
+  background: var(--accent);
+  color: #fff;
+}
+
+.gh-tab:hover:not(.active) {
+  color: var(--text);
+}
+
+/* GitHub 鐘舵€佺瓫閫夋寜閽?*/
+.gh-filter-group {
+  margin-left: auto;
+  display: flex;
+  gap: 2px;
+  background: #f3f4f6;
+  border-radius: 6px;
+  padding: 2px;
+}
+
+.gh-filter {
+  padding: 4px 10px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.gh-filter.active {
+  background: var(--card-bg);
+  color: var(--text);
+  box-shadow: var(--shadow);
+}
+
+.gh-filter:hover:not(.active) {
+  color: var(--text);
+}
+
+/* GitHub 宸插綊妗ｅ嬀閫夋锛堝鐢?toggle 缁勪欢锛?*/
+.gh-archive-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 12px;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  cursor: pointer;
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.gh-archive-toggle input[type="checkbox"] {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.gh-archive-toggle input:checked+.toggle-track {
+  background: var(--accent);
+}
+
+.gh-archive-toggle input:checked+.toggle-track .toggle-thumb {
+  left: 18px;
+}
+
+.github-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: auto;
+  padding: 0 20px 16px;
+}
+
+.gh-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0;
+  border-bottom: 1px solid #f3f4f6;
+  font-size: 0.85rem;
+}
+
+.gh-item:last-child {
+  border-bottom: none;
+}
+
+.gh-item .stat-icon.gh-state-icon {
+  flex-shrink: 0;
+}
+
+.gh-item .gh-repo {
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+  background: #f3f4f6;
+  padding: 1px 8px;
+  border-radius: 4px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.gh-item a {
+  color: var(--accent);
+  text-decoration: none;
+  flex: 1;
+  min-width: 60px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gh-item a:hover {
+  text-decoration: underline;
+}
+
+/* right meta group: labels + author + date + dispatch — stuck to right */
+.gh-item .gh-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+.gh-item .gh-label {
+  font-size: 0.65rem;
+  padding: 1px 8px;
+  border-radius: 10px;
+  background: #eff6ff;
+  color: #1e40af;
+  white-space: nowrap;
+}
+
+.gh-item .gh-user {
+  font-size: 0.72rem;
+  color: #9ca3af;
+  white-space: nowrap;
+}
+
+.gh-item .gh-date {
+  font-size: 0.7rem;
+  color: #9ca3af;
+  white-space: nowrap;
+}
+
+.gh-dispatch-btn {
+  cursor: pointer;
+  border: none;
+  background: none;
+  font-size: 0.85rem;
+  padding: 0 4px;
+}
+
+/* ========== Footer ========== */
+.footer {
+  text-align: center;
+  padding: 24px;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  border-top: 1px solid var(--border);
+}
+
+/* ========== Axis styles in SVG ========== */
+.scatter-axis {
+  stroke: #d1d5db;
+  stroke-width: 1;
+}
+
+.scatter-label {
+  fill: #6b7280;
+  font-size: 13px;
+  font-family: inherit;
+}
+
+.scatter-grid {
+  stroke: #f3f4f6;
+  stroke-width: 1;
+}
+
+.scatter-dot {
+  cursor: pointer;
+  transition: opacity 0.15s, r 0.15s;
+}
+
+.scatter-dot:hover {
+  opacity: 0.85;
+}
+
+/* 鏁ｇ偣鍥惧彸渚фā缁勫悕鏍囩 */
+.scatter-name-label {
+  pointer-events: none;
+  user-select: none;
+}
+
+/* ========== Dispatch Dialog ========== */
+.dispatch-dialog-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 1060;
+  background: rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(4px);
+  justify-content: center;
+  align-items: center;
+}
+
+.dispatch-dialog-overlay.show {
+  display: flex;
+}
+
+.dispatch-dialog-card {
+  background: var(--card-bg);
+  border-radius: 16px;
+  padding: 24px;
+  width: 380px;
+  max-width: 92%;
+  box-shadow: var(--shadow-lg);
+  position: relative;
+  animation: fadeIn 0.2s ease;
+}
+
+.dispatch-dialog-close {
+  position: absolute;
+  top: 10px;
+  right: 14px;
+  border: none;
+  background: none;
+  font-size: 1.4rem;
+  cursor: pointer;
+  color: var(--text-secondary);
+  line-height: 1;
+}
+
+.dispatch-dialog-close:hover {
+  color: var(--text);
+}
+
+.dispatch-dialog-card h4 {
+  margin: 0 0 4px;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.dispatch-dialog-repo {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.dispatch-dialog-title {
+  font-size: 0.85rem;
+  color: var(--text);
+  margin: 6px 0 14px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dispatch-dialog-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 12px;
+}
+
+.dispatch-dialog-field label {
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.dispatch-dialog-select {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 0.85rem;
+  background: var(--card-bg);
+  color: var(--text);
+  outline: none;
+}
+
+.dispatch-dialog-select:focus {
+  border-color: var(--accent);
+}
+
+.dispatch-dialog-textarea {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 0.85rem;
+  background: var(--card-bg);
+  color: var(--text);
+  outline: none;
+  resize: vertical;
+  font-family: inherit;
+}
+
+.dispatch-dialog-textarea:focus {
+  border-color: var(--accent);
+}
+
+.dispatch-go-btn {
+  width: 100%;
+  padding: 10px;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition);
+  margin-top: 4px;
+}
+
+.dispatch-go-btn:hover {
+  background: var(--accent-hover);
+}
+
+.dispatch-go-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* 派发模式切换 */
+.dispatch-mode-row {
+  display: flex;
+  gap: 16px;
+}
+
+.dispatch-mode-opt {
+  font-size: 0.82rem;
+  cursor: pointer;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.dispatch-mode-opt input[type="radio"] {
+  accent-color: var(--accent);
+}
+
+/* Issue inline dispatch button */
+.gh-dispatch-btn {
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  padding: 1px 6px;
+  opacity: 0.5;
+  transition: opacity var(--transition), border-color var(--transition);
+  flex-shrink: 0;
+  margin-left: 2px;
+}
+
+.gh-dispatch-btn:hover {
+  opacity: 1;
+  border-color: var(--accent);
+  background: #eff6ff;
+}
+
+/* ========== Chat TODO Widget ========== */
+.todo-widget-header {
+  padding: 5px 14px;
+  font-weight: 600;
+  font-size: 0.75rem;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.todo-progress {
+  font-size: 0.7rem;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.todo-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 8px;
+  font-size: 0.72rem;
+  line-height: 1.3;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.todo-item:last-child {
+  border-bottom: none;
+}
+
+.todo-icon {
+  flex-shrink: 0;
+  width: 14px;
+  height: 14px;
+}
+
+.todo-icon img {
+  display: block;
+  width: 14px;
+  height: 14px;
+}
+
+.todo-title {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.todo-in-progress {
+  background: #eff6ff;
+}
+
+.todo-in-progress .todo-title {
+  font-weight: 500;
+}
+
+.todo-completed .todo-title {
+  text-decoration: line-through;
+  color: #9ca3af;
+}
+
+/* ========== Ask User (inline in chat) ========== */
+.ask-inline-msg {
+  border: 1px solid var(--accent);
+  border-radius: 10px;
+  background: #eff6ff;
+  padding: 12px 14px !important;
+}
+
+.ask-inline-msg .chat-msg-role {
+  color: var(--accent) !important;
+  margin-bottom: 4px;
+}
+
+.ask-inline-question {
+  font-size: 0.85rem;
+  margin-bottom: 10px;
+  line-height: 1.5;
+  word-break: break-word;
+}
+
+.ask-inline-options {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 10px;
+}
+
+.ask-inline-opt-label {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 6px 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.82rem;
+  background: #fff;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.ask-inline-opt-label:hover {
+  border-color: var(--accent);
+  background: #dbeafe;
+}
+
+.ask-inline-opt-input {
+  flex-shrink: 0;
+  margin-top: 2px;
+  accent-color: var(--accent);
+}
+
+.ask-inline-opt-wrap {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.ask-inline-opt-text {
+  line-height: 1.4;
+}
+
+.ask-opt-desc {
+  display: block;
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+
+.ask-inline-hint {
+  font-size: 0.72rem;
+  color: var(--accent);
+  margin-bottom: 6px;
+}
+
+.ask-inline-input-row {
+  margin-bottom: 8px;
+}
+
+.ask-inline-input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 0.82rem;
+  resize: vertical;
+  font-family: inherit;
+  outline: none;
+  background: #fff;
+}
+
+.ask-inline-input:focus {
+  border-color: var(--accent);
+}
+
+.ask-inline-btns {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.ask-inline-confirm-btn {
+  padding: 6px 16px;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.82rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.ask-inline-confirm-btn:hover {
+  background: var(--accent-hover);
+}
+
+.ask-inline-cancel-btn {
+  padding: 6px 14px;
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+
+.ask-inline-cancel-btn:hover {
+  color: var(--text);
+  border-color: #d1d5db;
+}
+}
+
+/* ========== MCP Status Badges ========== */
+.mcp-status-badge {
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  font-size: 0.7rem;
+  line-height: 18px;
+  text-align: center;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.mcp-status-badge.ok {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.mcp-status-badge.error {
+  background: #fef2f2;
+  color: #991b1b;
+}
+
+.mcp-status-badge.builtin {
+  background: #f3e8ff;
+  color: #7c3aed;
+}
+
+.mcp-status-badge.pending {
+  background: #f3f4f6;
+  color: #9ca3af;
+}
+
+/* ========== MCP / Builtin Tool Display ========== */
+.mcp-tools {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-left: 12px;
+  border-left: 2px solid #e5e7eb;
+  margin-top: 4px;
+}
+
+.mcp-item.collapsed .mcp-tools {
+  display: none;
+}
+
+.mcp-tool-row {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 4px 0;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.mcp-tool-name {
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.mcp-tool-id {
+  font-size: 0.7rem;
+  color: #9ca3af;
+  display: block;
+  margin-top: 1px;
+  background: none;
+  padding: 0;
+  border-radius: 0;
+  font-family: inherit;
+}
+
+.mcp-tool-desc {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+}
+
+.mcp-provider-id {
+  font-size: 0.7rem;
+  color: #9ca3af;
+  background: none;
+  padding: 0;
+  border-radius: 0;
+  font-family: "SF Mono", "Cascadia Code", "Consolas", monospace;
+  margin: 0 0 2px 0;
+}
+
+/* Agent MCP status tag colors */
+.mcp-tag-ok {
+  border-color: #6ee7b7;
+}
+
+.mcp-tag-error {
+  background: #fef2f2 !important;
+  color: #991b1b !important;
+  border-color: #fecaca;
+}
+
+.mcp-tag-pending {
+  background: #fef9c3 !important;
+  color: #854d0e !important;
+  border-color: #fde68a;
+}
+
+/* Agent card warning icon */
+.agent-warn-icon {
+  font-size: 0.85rem;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: transform 0.15s;
+}
+
+.agent-warn-icon:hover {
+  transform: scale(1.2);
+}

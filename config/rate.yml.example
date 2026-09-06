@@ -1,0 +1,15 @@
+# 额外分数加成配置
+# 公式: 最终难度 = Codacy基础分 × 架构系数 × (1 + Σ(版本状态值 × 加载器倍数))
+version:
+  All: 0.075
+  Partly: 0.05
+  BugFix: 0.025
+  Planned: 0.04
+
+architecture:
+  Fabric-Loom: 0.5
+  ModDevGradle: 0.5
+  Architectury-Loom: 2
+  Stonecutter: 0.8
+
+multi_loader_multiplier: 1.2

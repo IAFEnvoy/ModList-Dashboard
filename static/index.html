@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>IAFEnvoy's Mods Dashboard</title>
+  <link rel="icon" type="image/webp" href="/favicon.webp">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/mods.css">
+  <link rel="stylesheet" href="css/panels.css">
+  <link rel="stylesheet" href="css/responsive.css">
+  <script src="https://static.iafenvoy.com/loading-indicator.js"></script>
+</head>
+
+<body>
+  <!-- 顶部标题栏 -->
+  <header class="top-bar">
+    <button class="sidebar-toggle" id="sidebarToggle" title="折叠侧边栏">☰</button>
+    <h1>IAFEnvoy's Mods Dashboard</h1>
+    <div class="top-bar-controls">
+      <div class="admin-dropdown" id="adminDropdown" style="display:none;">
+        <button class="admin-dropdown-btn" id="adminDropdownBtn">
+          <span data-i18n="adminTools">🛠️ 管理</span><span class="lang-arrow">▾</span>
+        </button>
+        <div class="admin-dropdown-menu" id="adminDropdownMenu">
+          <div class="admin-option" data-source="mod-editor">📝 <span data-i18n="adminEditMods">编辑模组</span></div>
+          <div class="admin-option" data-source="reload">📂 <span data-i18n="adminReloadLocal">重载本地配置</span></div>
+          <div class="admin-divider"></div>
+          <div class="admin-option" data-source="db">🧹 <span data-i18n="adminClearDbCache">清理数据库缓存</span></div>
+          <div class="admin-option" data-source="curseforge">🧹 <span data-i18n="adminRefreshCF">清理 CurseForge 缓存</span></div>
+          <div class="admin-option" data-source="github">🧹 <span data-i18n="adminRefreshGH">清理 GitHub 缓存</span></div>
+          <div class="admin-option" data-source="codacy">🧹 <span data-i18n="adminRefreshCodacy">清理 Codacy 缓存</span></div>
+          <div class="admin-option" data-source="all">🧹 <span data-i18n="adminRefreshAll">清理全部缓存</span></div>
+          <div class="admin-divider"></div>
+          <div class="admin-option" data-source="mcp-refresh">🔧 <span data-i18n="adminMCPRefresh">重新检测 MCP 服务器</span>
+          </div>
+          <div class="admin-divider"></div>
+          <div class="admin-option" data-source="accounts"><span data-i18n="adminAccounts">账户设置</span></div>
+        </div>
+      </div>
+      <div class="lang-dropdown" id="langDropdown">
+        <button class="lang-dropdown-btn" id="langDropdownBtn">
+          <img src="img/language.svg" class="lang-icon" alt=""><span class="lang-arrow">▾</span>
+        </button>
+        <div class="lang-dropdown-menu" id="langDropdownMenu">
+          <div class="lang-option" data-lang="en_us"><span class="lang-check">✔</span> English</div>
+          <div class="lang-option" data-lang="zh_cn"><span class="lang-check">✔</span> 中文</div>
+        </div>
+      </div>
+      <a href="https://github.com/IAFEnvoy" target="_blank" class="gh-link">GitHub</a>
+      <button class="login-btn" id="loginBtn" style="display:none;"><span data-i18n="btnLogin">🔑 Login</span></button>
+      <button class="login-btn" id="logoutBtn" style="display:none;" data-i18n="btnLogout">Logout</button>
+    </div>
+  </header>
+
+  <!-- 主区域：侧边栏 + 内容 -->
+  <div class="main-area">
+    <!-- 侧边栏覆盖层背景 -->
+    <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+    <!-- 左侧边栏（可折叠，窄屏下为覆盖层） -->
+    <aside class="sidebar collapsed" id="sidebar">
+      <img src="working.webp" class="sidebar-working" alt="working">
+      <div class="stat-card active" data-page="mods">
+        <div class="stat-row"><span class="stat-num" id="statTotal">-</span><span class="stat-label"
+            data-i18n="totalMods">总模组数</span></div>
+        <div class="stat-row"><span class="stat-num" id="statDownloads">-</span><span class="stat-label"
+            data-i18n="totalDownloads">总下载量</span></div>
+      </div>
+      <div class="stat-card" data-page="github">
+        <div class="stat-row"><span class="stat-num" id="statIssues">-</span><span class="stat-label"
+            data-i18n="openIssues">Issues</span></div>
+        <div class="stat-row"><span class="stat-num" id="statPRs">-</span><span class="stat-label"
+            data-i18n="openPRs">PRs</span></div>
+      </div>
+      <div class="stat-card" data-page="todos">
+        <div class="stat-row"><span class="stat-num" id="statBugs">-</span><span class="stat-label"
+            data-i18n="knownBugs">已知Bug</span></div>
+        <div class="stat-row"><span class="stat-num" id="statTodos">-</span><span class="stat-label"
+            data-i18n="todoItems">TODO</span></div>
+      </div>
+      <div class="stat-card" data-page="agents" style="display:none">
+        <div class="stat-row"><span class="stat-num" id="statAgentTypes">-</span><span class="stat-label"
+            data-i18n="agentTypes">Agent 类型</span></div>
+        <div class="stat-row"><span class="stat-num" id="statMCPServers">-</span><span class="stat-label"
+            data-i18n="mcpServers">MCP 服务器</span></div>
+      </div>
+      <div class="stat-card" data-page="drive" style="display:none">
+        <div class="stat-row"><span class="stat-num">📂</span><span class="stat-label">网盘</span></div>
+      </div>
+      <div class="sidebar-credit">© 2024-2026 IAFEnvoy<br>All Right Reserved</div>
+    </aside>
+
+    <!-- 右侧内容区域 -->
+    <main class="content-area" id="contentArea">
+
+      <!-- 加载动画 -->
+      <div id="spinner"><loading-indicator></loading-indicator></div>
+
+      <!-- 代办事项容器 -->
+      <div id="todosSection" class="todos-section" style="display:none;"></div>
+
+      <!-- Agent 面板容器（三标签：对话 / Agent列表 / MCP列表） -->
+      <div id="agentsSection" class="agents-section" style="display:none;">
+        <div class="agent-tabs">
+          <button class="agent-tab active" data-agent-view="chat" data-i18n="agentTabChat">对话</button>
+          <button class="agent-tab" data-agent-view="agents" data-i18n="agentTabAgents">Agent 列表</button>
+          <button class="agent-tab" data-agent-view="mcps" data-i18n="agentTabMCPs">MCP 服务器</button>
+        </div>
+
+        <!-- 对话视图（历史列表 + 聊天，二者互斥） -->
+        <div id="agentChatView" class="agent-chat-view">
+          <!-- 历史记录面板（默认可见） -->
+          <div id="agentHistoryPanel" class="agent-history-panel">
+            <div class="history-header-row">
+              <div class="history-title-row">
+                <h3 id="historyPanelTitle" data-i18n="agentHistory">对话历史</h3>
+                <button type="button" id="historyArchiveToggle" class="history-archive-btn"
+                  onclick="toggleArchivedHistory()">已归档</button>
+              </div>
+              <input type="text" id="historySearchInput" class="history-search-input" data-i18n="chatSearchPlaceholder"
+                placeholder="搜索对话..." oninput="onHistorySearch()"
+                onkeydown="if(event.key==='Escape'){this.value='';onHistorySearch();this.blur();}">
+            </div>
+            <div id="agentHistoryList" class="agent-history-grid">
+              <div style="grid-column:1/-1;display:flex;justify-content:center;padding:48px 16px">
+                <loading-indicator></loading-indicator>
+              </div>
+            </div>
+          </div>
+
+          <!-- 聊天面板（点击历史后显示） -->
+          <div id="agentChatPanel" class="agent-chat-panel" style="display:none">
+            <div class="chat-header">
+              <button class="chat-back-btn" onclick="backToHistory()">← Back</button>
+              <span id="chatTitle" class="chat-title" title="点击编辑标题">Agent Chat</span>
+              <span id="chatProject" class="chat-project"></span>
+              <button class="chat-search-btn" onclick="openSearchModal()" title="搜索对话"
+                data-i18n="chatSearch">🔍</button>
+              <button class="chat-share-btn" id="chatShareBtn" onclick="toggleShareMode()" title="分享对话">📤</button>
+            </div>
+            <div id="chatMessages" class="chat-messages"></div>
+            <div id="chatLoadingSpinner" style="display:none;"><loading-indicator></loading-indicator></div>
+            <div id="todoWidgetContainer" class="todo-widget-container" style="display:none;"></div>
+            <div id="todoStatusBar" class="todo-status-bar" onclick="openTodoModal()" style="display:none;">
+              <span class="todo-status-icon">📋</span>
+              <span class="todo-status-label">待办列表</span>
+              <span class="todo-status-count" id="todoStatusCount"></span>
+            </div>
+            <div class="chat-thinking" id="thinkingIndicator" style="display:none;">
+              <span></span><span></span><span></span>
+            </div>
+            <div class="chat-input-area">
+              <!-- 已选 Issue chips -->
+              <div id="selectedIssueChips" class="selected-issue-chips" style="display:none"></div>
+              <textarea id="chatInput" class="chat-input" placeholder="输入消息… (Shift+Enter 发送)" rows="3"></textarea>
+              <div class="chat-toolbar">
+                <select id="chatModelSelect" class="chat-model-select-bottom"></select>
+                <button id="chatIssueBtn" class="chat-issue-btn" title="选择 Issue/PR 作为附件发送" style="display:none"
+                  onclick="showIssuePicker()">📋</button>
+                <button id="chatDriveBtn" class="chat-issue-btn" title="从云盘选择文件作为附件" style="display:none"
+                  onclick="showDrivePicker()">📂</button>
+                <div id="bypassToggle" class="bypass-toggle" title="开启后，下载文件/提取网页等读操作自动通过审批；写文件/格式化等危险操作仍需手动审批"
+                  onclick="var cb=document.getElementById('bypassApprovalCheck');cb.checked=!cb.checked;cb.dispatchEvent(new Event('change'));">
+                  <input type="checkbox" id="bypassApprovalCheck" class="bypass-check-input">
+                  <span class="bypass-label">绕过审批</span>
+                </div>
+                <div class="ctx-usage-wrap" id="ctxUsageBar" title="Token 用量，点击输入压缩指令" style="display:none"
+                  onclick="document.getElementById('chatInput').value = '/compact'; document.getElementById('chatInput').focus();">
+                  <div class="ctx-usage-bar">
+                    <div class="ctx-usage-fill" id="ctxUsageFill"></div>
+                  </div>
+                  <span class="ctx-usage-label" id="ctxUsageLabel"></span>
+                </div>
+                <button id="chatSendBtn" class="chat-send-btn" title="发送 (Shift+Enter)">
+                  <img src="img/send.svg" class="btn-icon" alt="发送">
+                </button>
+                <button id="chatStopBtn" class="chat-stop-btn" title="停止生成" style="display:none;">
+                  <img src="img/stop.svg" class="btn-icon" alt="停止">
+                </button>
+                <button id="chatContinueBtn" class="chat-continue-btn" title="继续推理" style="display:none;">
+                  继续推理 ▶
+                </button>
+              </div>
+              <!-- Issue Picker 弹出层 -->
+              <div id="issuePicker" class="issue-picker" style="display:none">
+                <div class="issue-picker-header">
+                  <span>选择 Issue/PR 作为附件</span>
+                  <button class="issue-picker-close" onclick="closeIssuePicker()">&times;</button>
+                </div>
+                <div class="issue-picker-controls">
+                  <input type="text" id="issuePickerSearch" class="issue-picker-search" placeholder="搜索...">
+                  <select id="issuePickerStateFilter" class="issue-picker-state-filter"
+                    onchange="onIssuePickerFilterChange()">
+                    <option value="all">全部</option>
+                    <option value="open" selected>Open</option>
+                    <option value="closed">Closed</option>
+                  </select>
+                </div>
+                <div id="issuePickerList" class="issue-picker-list"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Agent 列表视图 -->
+        <div id="agentListView" class="agent-list-view" style="display:none;">
+          <div class="agent-select-area">
+            <select id="agentSelect" class="agent-select-dropdown">
+              <option value="">-- 选择一个 Agent --</option>
+            </select>
+          </div>
+          <div id="agentDetailPanel" class="agent-detail-panel" style="display:none;"></div>
+        </div>
+
+        <!-- MCP 服务器视图 -->
+        <div id="agentMcpView" class="agent-mcp-view" style="display:none;">
+          <div class="mcp-left-panel" id="mcpLeftPanel"></div>
+          <div class="mcp-right-panel" id="mcpRightPanel">
+            <div class="mcp-placeholder" id="mcpPlaceholder">
+              <div class="mcp-placeholder-icon">🔧</div>
+              <div class="mcp-placeholder-text" data-i18n="mcpSelectHint">选择一个 MCP 服务器或内置提供者，查看其工具列表</div>
+            </div>
+            <div class="mcp-detail-content" id="mcpDetailContent" style="display:none;"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 模组区域容器 -->
+      <div id="modsSection" class="mods-section">
+        <div class="mods-tabs">
+          <button class="mods-tab active" data-view="list" data-i18n="tabList">列表</button>
+          <button class="mods-tab" data-view="scatter" data-i18n="tabScatter">散点图</button>
+        </div>
+        <!-- 散点图容器 -->
+        <div id="scatterView" class="scatter-view" style="display:none;">
+          <div class="chart-wrapper">
+            <svg id="scatterSvg"></svg>
+            <div class="chart-sub" data-i18n="scatterSub">🖱️ 悬浮查看详情 | ✨ 点击打开卡片</div>
+          </div>
+          <!-- 散点图图例 -->
+          <div class="scatter-legend" id="scatterLegend"></div>
+          <label class="scatter-label-toggle">
+            <input type="checkbox" id="showScatterLabels" checked>
+            <span class="toggle-track"><span class="toggle-thumb"></span></span>
+            <span class="toggle-text" data-i18n="scatterShowNames">显示名称</span>
+          </label>
+        </div>
+
+        <!-- 列表视图容器 -->
+        <div id="listView" class="list-view">
+          <div class="filter-bar">
+            <input type="text" id="searchInput" data-i18n="searchPlaceholder" placeholder="搜索模组..."
+              class="search-input">
+            <select id="statusFilter" class="filter-select">
+              <option value="all" data-i18n="allStatus">全部状态</option>
+            </select>
+            <select id="sortBy" class="filter-select">
+              <option value="downloads_desc" selected>下载量 ↓</option>
+              <option value="downloads_asc">下载量 ↑</option>
+              <option value="name_asc">名称 A-Z</option>
+              <option value="name_desc">名称 Z-A</option>
+              <option value="status_asc">状态顺序</option>
+              <option value="status_desc">状态倒序</option>
+              <option value="issues_desc">Issue+PR ↓</option>
+              <option value="issues_asc">Issue+PR ↑</option>
+            </select>
+          </div>
+          <div id="modList" class="mod-list"></div>
+        </div>
+      </div>
+
+      <!-- GitHub 面板容器 -->
+      <div class="github-panel" id="githubPanel">
+        <h2 class="panel-title">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+            <path
+              d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z" />
+          </svg>
+          GitHub Issues & PRs
+        </h2>
+        <div class="github-tabs">
+          <button class="gh-tab active" data-gh="issues"><img src="img/issue.svg" class="gh-tab-icon"
+              data-i18n="issues"> Issues</button>
+          <button class="gh-tab" data-gh="pulls"><img src="img/pr.svg" class="gh-tab-icon" data-i18n="pulls"> Pull
+            Requests</button>
+          <span class="gh-filter-group">
+            <button class="gh-filter" data-gh-filter="all" data-i18n="all">全部</button>
+            <button class="gh-filter active" data-gh-filter="open" data-i18n="open">Open</button>
+            <button class="gh-filter" data-gh-filter="closed" data-i18n="closed">Closed</button>
+          </span>
+          <label class="gh-archive-toggle">
+            <input type="checkbox" id="showArchivedCheck">
+            <span class="toggle-track"><span class="toggle-thumb"></span></span>
+            <span class="toggle-text" data-i18n="archived">已归档</span>
+          </label>
+        </div>
+        <div id="githubList" class="github-list"></div>
+      </div>
+
+      <!-- 散点图 Tooltip -->
+      <div id="tooltip" class="tooltip"></div>
+
+      <!-- 模组详情卡片 -->
+      <div id="detailOverlay" class="detail-overlay">
+        <div class="detail-card" id="detailCard">
+          <button class="detail-close" id="detailClose">&times;</button>
+          <div class="detail-header">
+            <div class="detail-logo-wrap">
+              <img id="detailLogo" src="" alt="">
+              <span id="detailLogoFallback" class="detail-logo-fallback"></span>
+            </div>
+            <div>
+              <h2 id="detailName"></h2>
+              <p id="detailDesc"></p>
+            </div>
+          </div>
+          <div class="detail-tags" id="detailTags"></div>
+          <div class="detail-coop" id="detailCoop"></div>
+          <div class="detail-links" id="detailLinks"></div>
+          <div class="detail-stats">
+            <div class="dstat"><span class="dstat-num" id="detailCF">-</span><span data-i18n="cfDownloads">CurseForge
+                下载</span></div>
+            <div class="dstat"><span class="dstat-num" id="detailPop">-</span><span data-i18n="popularity">热度</span>
+            </div>
+            <div class="dstat"><span class="dstat-num" id="detailDiff">-</span><span data-i18n="difficulty">维护难度</span>
+            </div>
+          </div>
+          <div class="detail-github" id="detailGitHub"></div>
+        </div>
+      </div>
+
+      <!-- 派发 Issue/PR 到智能体弹窗 -->
+      <div id="dispatchDialog" class="dispatch-dialog-overlay">
+        <div class="dispatch-dialog-card">
+          <button class="dispatch-dialog-close" onclick="closeDispatchDialog()">&times;</button>
+          <h4>🚀 派发 Issue/PR 到智能体</h4>
+          <p class="dispatch-dialog-repo" id="dispatchRepoLabel"></p>
+          <p class="dispatch-dialog-title" id="dispatchTitle"></p>
+          <input type="hidden" id="dispatchOwner">
+          <input type="hidden" id="dispatchRepo">
+          <input type="hidden" id="dispatchNumber">
+          <input type="hidden" id="dispatchGhType">
+          <div class="dispatch-dialog-field">
+            <label>目标项目</label>
+            <select id="dispatchModSelect" class="dispatch-dialog-select"></select>
+          </div>
+          <div class="dispatch-dialog-field">
+            <label>创建模式</label>
+            <div class="dispatch-mode-row">
+              <label class="dispatch-mode-opt"><input type="radio" name="dispatchMode" value="new" checked
+                  onchange="onDispatchModeChange()"> 新建对话</label>
+              <label class="dispatch-mode-opt"><input type="radio" name="dispatchMode" value="attach"
+                  onchange="onDispatchModeChange()"> 附加到已有对话</label>
+            </div>
+          </div>
+          <div class="dispatch-dialog-field" id="dispatchAgentField">
+            <label>Agent</label>
+            <select id="dispatchAgentSelect" class="dispatch-dialog-select"></select>
+          </div>
+          <div class="dispatch-dialog-field" id="dispatchModelField">
+            <label>模型</label>
+            <select id="dispatchModelSelect" class="dispatch-dialog-select"></select>
+          </div>
+          <div class="dispatch-dialog-field" id="dispatchSessionField" style="display:none">
+            <label>已有对话</label>
+            <select id="dispatchSessionSelect" class="dispatch-dialog-select"></select>
+          </div>
+          <div class="dispatch-dialog-field">
+            <label>额外提示词</label>
+            <textarea id="dispatchExtraPrompt" class="dispatch-dialog-textarea" rows="2"
+              placeholder="可选的额外任务描述（如：重点关注线程安全问题）"></textarea>
+          </div>
+          <button id="dispatchGoBtn" class="dispatch-go-btn" onclick="doDispatch()">🚀 派发</button>
+        </div>
+      </div>
+
+      <!-- 代办列表弹窗 -->
+      <div id="todoModal" class="todo-modal-overlay" onclick="if(event.target===this)closeTodoModal()">
+        <div class="todo-modal-card">
+          <div class="todo-modal-header">
+            <span>📋 待办列表</span>
+            <button class="todo-modal-close" onclick="closeTodoModal()">&times;</button>
+          </div>
+          <div id="todoModalBody" class="todo-modal-body"></div>
+        </div>
+      </div>
+
+      <!-- 深度思考详情弹窗 -->
+      <div id="thinkingModal" class="thinking-modal-overlay" onclick="if(event.target===this)closeThinkingModal()">
+        <div class="thinking-modal-card">
+          <div class="thinking-modal-header">
+            <span>💭 深度思考详情</span>
+            <button class="thinking-modal-close" onclick="closeThinkingModal()">&times;</button>
+          </div>
+          <div id="thinkingModalBody" class="thinking-modal-body"></div>
+        </div>
+      </div>
+
+      <!-- 搜索对话弹窗 -->
+      <div id="searchModal" class="search-modal-overlay" onclick="if(event.target===this)closeSearchModal()">
+        <div class="search-modal-card">
+          <div class="search-modal-header">
+            <span data-i18n="chatSearchTitle">🔍 搜索对话</span>
+            <button class="search-modal-close" onclick="closeSearchModal()">&times;</button>
+          </div>
+          <div class="search-modal-input-area">
+            <input type="text" id="searchInput" class="search-input" data-i18n="chatSearchPlaceholder"
+              placeholder="输入关键词搜索..." oninput="onSearchInput()" onkeydown="if(event.key==='Escape')closeSearchModal()">
+          </div>
+          <div id="searchResults" class="search-results">
+            <div class="search-hint" data-i18n="chatSearchHint">输入关键词，搜索所有对话历史</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 云盘文件选择器弹窗 -->
+      <div id="drivePickerOverlay" class="search-modal-overlay" onclick="if(event.target===this)closeDrivePicker()">
+        <div class="search-modal-card" style="max-height:70vh;">
+          <div class="search-modal-header">
+            <span>📂 选择云盘文件</span>
+            <button class="search-modal-close" onclick="closeDrivePicker()">&times;</button>
+          </div>
+          <div class="drive-picker-breadcrumb" id="drivePickerBreadcrumb"></div>
+          <div class="drive-picker-list" id="drivePickerList">
+            <div style="text-align:center;padding:32px;color:#9ca3af;">加载中…</div>
+          </div>
+          <div class="drive-picker-footer" id="drivePickerFooter" style="display:none">
+            <span id="drivePickerSelected">未选择</span>
+            <button class="drive-btn" onclick="confirmDrivePicker()">✅ 选择</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 登录弹窗 -->
+      <div id="loginOverlay" class="login-overlay">
+        <div class="login-card">
+          <button class="login-close" id="loginCloseBtn">&times;</button>
+          <h3 data-i18n="loginTitle">🔑 Login</h3>
+          <input type="text" id="loginUser" class="login-input" data-i18n="loginUsername" placeholder="Username"
+            autocomplete="username">
+          <input type="password" id="loginPass" class="login-input" data-i18n="loginPassword" placeholder="Password"
+            autocomplete="current-password">
+          <div class="login-error" id="loginError"></div>
+          <button class="login-submit" id="loginSubmit" data-i18n="loginSubmit">Login</button>
+        </div>
+      </div>
+
+      <div id="accountOverlay" class="login-overlay">
+        <div class="account-card">
+          <button class="login-close" id="accountCloseBtn" aria-label="Close">&times;</button>
+          <div class="account-heading">
+            <h3 data-i18n="adminAccounts">账户设置</h3>
+            <span id="accountCurrentUser"></span>
+          </div>
+          <section class="account-section">
+            <h4 data-i18n="accountChangePassword">修改密码</h4>
+            <input type="password" id="accountCurrentPassword" class="login-input" data-i18n="accountCurrentPassword" placeholder="当前密码"
+              autocomplete="current-password">
+            <input type="password" id="accountNewPassword" class="login-input" data-i18n="accountNewPassword" placeholder="新密码（至少 8 位）"
+              autocomplete="new-password">
+            <input type="password" id="accountConfirmPassword" class="login-input" data-i18n="accountConfirmPassword" placeholder="确认新密码"
+              autocomplete="new-password">
+            <button class="login-submit" id="accountChangePassword" data-i18n="accountChangePassword">修改密码</button>
+            <div class="account-message" id="accountPasswordMessage"></div>
+          </section>
+          <section class="account-section">
+            <div class="account-section-heading">
+              <h4 data-i18n="accountUsersHeading">账号</h4>
+              <span id="accountUserCount"></span>
+            </div>
+            <div class="account-create-row">
+              <input type="text" id="accountNewUsername" class="login-input" data-i18n="accountUsername" placeholder="用户名" autocomplete="off">
+              <input type="password" id="accountNewUserPassword" class="login-input" data-i18n="accountInitialPassword" placeholder="初始密码（至少 8 位）"
+                autocomplete="new-password">
+              <button class="account-action-btn" id="accountCreateUser" data-i18n="accountAddUser">添加</button>
+            </div>
+            <div class="account-message" id="accountUserMessage"></div>
+            <div class="account-user-list" id="accountUserList"></div>
+          </section>
+        </div>
+      </div>
+
+      <!-- 网盘面板 -->
+      <div id="driveSection" class="drive-section" style="display:none;">
+        <div class="drive-header">
+          <h3 class="drive-title">📂 网盘</h3>
+          <div class="drive-breadcrumb" id="driveBreadcrumb"></div>
+          <div class="drive-toolbar">
+            <button class="drive-btn" onclick="driveShowNewRow('folder')">📁 新建文件夹</button>
+            <button class="drive-btn" onclick="driveShowNewRow('file')">📄 新建文件</button>
+            <label class="drive-btn drive-upload-btn">
+              📤 上传文件<input type="file" id="driveUploadInput" multiple onchange="driveUpload(this)"
+                style="display:none">
+            </label>
+            <button class="drive-btn" id="driveRenameBtn" onclick="driveStartRename()" style="display:none">✏️
+              重命名</button>
+            <button class="drive-btn" id="driveEditBtn" onclick="driveEditSelected()" style="display:none">📝
+              编辑</button>
+            <button class="drive-btn" id="driveDownloadBtn" onclick="driveDownloadSelected()" style="display:none">⬇
+              下载</button>
+            <button class="drive-btn drive-btn-danger" id="driveDeleteBtn" onclick="driveDeleteSelected()"
+              style="display:none">🗑 删除</button>
+            <button class="drive-btn" id="driveClearBtn" onclick="driveClearSelection();driveUpdateToolbar()"
+              style="display:none">✕ 清除选择</button>
+          </div>
+        </div>
+        <div class="drive-file-list" id="driveFileList">
+          <div style="text-align:center;padding:40px;color:#9ca3af;">加载中…</div>
+        </div>
+        <!-- 文本预览弹窗 -->
+        <div class="drive-preview-overlay" id="drivePreviewOverlay" style="display:none">
+          <div class="drive-preview-box">
+            <div class="drive-preview-header">
+              <span id="drivePreviewTitle"></span>
+              <div style="display:flex;gap:8px;">
+                <button class="drive-btn" id="drivePreviewEditBtn" onclick="driveStartEdit()" style="display:none">📝
+                  编辑</button>
+                <button class="drive-preview-close" onclick="closeDrivePreview()">&times;</button>
+              </div>
+            </div>
+            <pre class="drive-preview-content" id="drivePreviewContent"></pre>
+            <textarea class="drive-edit-textarea" id="driveEditTextarea" style="display:none"></textarea>
+            <div class="drive-edit-bar" id="driveEditBar" style="display:none">
+              <button class="drive-btn" onclick="driveSaveEdit()">💾 保存</button>
+              <button class="drive-btn" onclick="driveCancelEdit()">取消</button>
+            </div>
+          </div>
+        </div>
+        <!-- 新建文件夹弹窗 -->
+        <div class="drive-preview-overlay" id="driveMkdirOverlay" style="display:none">
+          <div class="drive-preview-box" style="width:360px;">
+            <div class="drive-preview-header">
+              <span>📁 新建文件夹</span>
+              <button class="drive-preview-close" onclick="closeDriveMkdir()">&times;</button>
+            </div>
+            <div style="padding:14px 16px;display:flex;gap:8px;">
+              <input type="text" id="driveMkdirInput" class="drive-mkdir-input" placeholder="文件夹名称"
+                onkeydown="if(event.key==='Enter')driveConfirmMkdir()">
+              <button class="drive-btn" onclick="driveConfirmMkdir()" style="flex-shrink:0;">创建</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="js/i18n.js"></script>
+  <script src="js/core.js"></script>
+  <script src="js/fetch.js"></script>
+  <script src="js/list.js"></script>
+  <script src="js/scatter.js"></script>
+  <script src="js/LLMStream2.js"></script>
+  <script src="js/detail.js"></script>
+  <script src="js/github.js"></script>
+  <script src="js/todolist.js"></script>
+  <script src="js/marked.min.js"></script>
+  <script src="js/purify.min.js"></script>
+  <script src="js/agent-state.js"></script>
+  <script src="js/agent-todo.js"></script>
+  <script src="js/agent-ask.js"></script>
+  <script src="js/agent-mcp.js"></script>
+  <script src="js/agent-chat.js"></script>
+  <script src="js/agent-list.js"></script>
+  <script src="js/login.js"></script>
+  <script src="js/drive.js?v=2"></script>
+</body>
+
+</html>

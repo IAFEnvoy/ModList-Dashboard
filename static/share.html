@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>分享 - ModList Dashboard</title>
+  <script src="https://static.iafenvoy.com/loading-indicator.js"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box
+    }
+
+    body {
+      font-family: ui-monospace, 'Cascadia Code', 'Source Code Pro', Menlo, Consolas, monospace;
+      background: #f9fafb;
+      color: #1f2937;
+      line-height: 1.6
+    }
+
+    .pg {
+      max-width: 900px;
+      margin: 40px auto;
+      padding: 0 20px
+    }
+
+    .hd {
+      margin-bottom: 24px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid #e5e7eb
+    }
+
+    .hd h1 {
+      font-size: 1.2rem;
+      color: #111827
+    }
+
+    .hd .mt {
+      font-size: .75rem;
+      color: #9ca3af;
+      margin-top: 4px
+    }
+
+    .nf {
+      text-align: center;
+      padding: 40px
+    }
+
+    .nf h1 {
+      font-size: 1.5rem;
+      color: #dc2626;
+      margin-bottom: 12px
+    }
+
+    .nf p {
+      color: #6b7280;
+      font-size: .9rem
+    }
+
+    .wrap {
+      margin-bottom: 8px
+    }
+
+    .role {
+      font-size: .7rem;
+      font-weight: 600;
+      color: #6b7280;
+      margin-bottom: 2px
+    }
+
+    .role .chat-model-label {
+      font-weight: 400;
+      color: #9ca3af;
+      margin-left: 4px;
+      font-size: .65rem
+    }
+
+    [data-author="ai"]+[data-author="ai"] .role,
+    [data-author="user"]+[data-author="user"] .role {
+      display: none
+    }
+
+    .msg {
+      padding: 6px 10px;
+      border-radius: 8px
+    }
+
+    .msg.user {
+      background: #eef2ff;
+      color: #1e293b
+    }
+
+    .msg.assistant {
+      background: #fff;
+      border: 1px solid #e5e7eb
+    }
+
+    .msg.thinking-block {
+      background: #fffbeb;
+      border: 1px dashed #fcd34d;
+      font-size: .75rem;
+      color: #92400e
+    }
+
+    .msg.tool-call {
+      background: #f3f4f6;
+      border-left: 3px solid #9ca3af;
+      padding: 3px 8px;
+      margin: 2px 0;
+      font-size: .75rem;
+      color: #6b7280
+    }
+
+    .msg.approval_request,
+    .msg.ask_user {
+      background: #fef3c7;
+      border: 1px solid #f59e0b;
+      font-size: .8rem;
+      padding: 6px 10px
+    }
+
+    .chat-msg-text {
+      font-size: .85rem;
+      white-space: pre-wrap;
+      word-break: break-word;
+      line-height: 1.45
+    }
+
+    .chat-msg-text code {
+      background: #f3f4f6;
+      padding: 1px 5px;
+      border-radius: 4px;
+      font-family: 'JetBrains Mono', 'Cascadia Code', 'Fira Code', monospace;
+      font-size: .8rem
+    }
+
+    .chat-msg-text pre {
+      background: #f3f4f6;
+      color: #1f2937;
+      padding: 10px 14px;
+      border-radius: 8px;
+      border: 1px solid #e5e7eb;
+      overflow-x: auto;
+      margin: 2px 0;
+      font-size: .78rem;
+      line-height: 1.5
+    }
+
+    .chat-msg-text pre code {
+      background: none;
+      padding: 0;
+      color: inherit;
+      font-size: inherit
+    }
+
+    .chat-msg-text table {
+      border-collapse: collapse;
+      width: 100%;
+      margin: 2px 0;
+      font-size: .8rem
+    }
+
+    .chat-msg-text th,
+    .chat-msg-text td {
+      border: 1px solid #e5e7eb;
+      padding: 4px 10px;
+      text-align: left
+    }
+
+    .chat-msg-text th {
+      background: #f9fafb;
+      font-weight: 600
+    }
+
+    .chat-msg-text blockquote {
+      border-left: 3px solid #d1d5db;
+      padding: 0 0 0 10px;
+      color: #6b7280;
+      margin: 0
+    }
+
+    .chat-msg-text blockquote p {
+      font-size: .85rem
+    }
+
+    .chat-msg-text a {
+      color: #3b82f6
+    }
+
+    .chat-msg-text hr {
+      border: none;
+      border-top: 1px solid #e5e7eb;
+      margin: 8px 0
+    }
+
+    .chat-msg-text ul,
+    .chat-msg-text ol {
+      padding-left: 20px;
+      margin: 2px 0
+    }
+
+    .chat-attachment {
+      font-size: .75rem;
+      color: #6b7280;
+      margin-top: 4px
+    }
+
+    .chat-attachment pre {
+      background: #f3f4f6;
+      padding: 6px 10px;
+      border-radius: 6px;
+      overflow-x: auto;
+      font-size: .7rem;
+      max-height: 200px
+    }
+  </style>
+</head>
+
+<body>
+  <div class="pg">
+    <div class="hd" id="shareHeader" style="display:none">
+      <h1 id="shareTitle"></h1>
+      <div class="mt" id="shareMeta"></div>
+    </div>
+    <div id="shareMessages"></div>
+    <div class="nf" id="shareNotFound" style="display:none">
+      <h1>分享不存在</h1>
+      <p>此分享链接无效或已被删除。</p>
+    </div>
+    <div id="shareLoading" style="display:flex;justify-content:center;padding:80px 16px">
+      <loading-indicator></loading-indicator></div>
+  </div>
+  <script src="/js/marked.min.js"></script>
+  <script src="/js/purify.min.js"></script>
+  <script>
+    (function () {
+      var path = window.location.pathname;
+      var shareId = path.replace(/^\/share\//, '').replace(/\/$/, '');
+      if (!shareId) { showError('缺少分享 ID'); return; }
+
+      fetch('/api/agent/share/' + encodeURIComponent(shareId))
+        .then(function (r) {
+          if (!r.ok) throw new Error('not found');
+          return r.json();
+        })
+        .then(render)
+        .catch(function () { showError('分享不存在或已被删除'); });
+
+      function showError(msg) {
+        var s = document.getElementById('shareLoading'); if (s) s.style.display = 'none';
+        document.getElementById('shareHeader').style.display = 'none';
+        document.getElementById('shareMessages').innerHTML = '';
+        var nf = document.getElementById('shareNotFound');
+        nf.style.display = '';
+        if (msg) nf.querySelector('p').textContent = msg;
+        document.title = '分享不存在 - ModList Dashboard';
+      }
+
+      function render(data) {
+        var s = document.getElementById('shareLoading'); if (s) s.style.display = 'none';
+        document.getElementById('shareNotFound').style.display = 'none';
+        document.getElementById('shareNotFound').style.display = 'none';
+        var hd = document.getElementById('shareHeader');
+        hd.style.display = '';
+        document.getElementById('shareTitle').textContent = data.title || '';
+        document.getElementById('shareMeta').textContent = 'Share ID: ' + shareId;
+        document.title = (data.title || '分享') + ' - ModList Dashboard';
+
+        var container = document.getElementById('shareMessages');
+        var msgs = data.messages || [];
+        var lastAuthor = '';
+
+        try {
+          msgs.forEach(function (m) {
+            var author = (m.type === 'user' || m.type === 'attachment') ? 'user' : 'ai';
+            var roleLabel = author === 'user' ? 'You' : 'AI';
+            var wrap = document.createElement('div');
+            wrap.className = 'wrap';
+            wrap.setAttribute('data-author', author);
+
+            if (author !== lastAuthor) {
+              var roleEl = document.createElement('div');
+              roleEl.className = 'role';
+              roleEl.textContent = roleLabel;
+              wrap.appendChild(roleEl);
+            }
+            lastAuthor = author;
+
+            var contentStr = contentText(m);
+            switch (m.type) {
+              case 'user':
+                wrap.appendChild(divMsg('user', escHtml(contentStr)));
+                break;
+              case 'attachment':
+                var det = document.createElement('details');
+                det.className = 'chat-attachment';
+                det.innerHTML = '<summary>📎 附件</summary><pre>' + escHtml(trunc(contentStr, 2000)) + '</pre>';
+                wrap.appendChild(divMsg('user', '')).querySelector('.chat-msg-text').appendChild(det);
+                break;
+              case 'message':
+              case 'assistant':
+                var rendered;
+                try { rendered = DOMPurify.sanitize(marked.parse(contentStr), { USE_PROFILES: { html: true } }); } catch (e) { rendered = escHtml(contentStr); }
+                wrap.appendChild(divMsg('assistant', rendered));
+                break;
+              case 'thinking':
+                var tkDiv = document.createElement('div');
+                tkDiv.className = 'msg thinking-block';
+                tkDiv.innerHTML = '<div>' + escHtml(trunc(contentStr, 5000)) + '</div>';
+                wrap.appendChild(tkDiv);
+                break;
+              case 'tool_call':
+                var tcDiv = document.createElement('div');
+                tcDiv.className = 'msg tool-call';
+                var tc = m.content || {};
+                tcDiv.innerHTML = '<div>🔧 ' + escHtml(tc.tool || tc.name || tc.type || '') + '</div>';
+                wrap.appendChild(tcDiv);
+                break;
+              case 'approval_request':
+                var apDiv = document.createElement('div');
+                apDiv.className = 'msg approval_request';
+                apDiv.textContent = '⚠️ ' + contentStr;
+                wrap.appendChild(apDiv);
+                break;
+              case 'ask_user':
+                var auDiv = document.createElement('div');
+                auDiv.className = 'msg ask_user';
+                auDiv.textContent = '❓ ' + contentStr;
+                wrap.appendChild(auDiv);
+                break;
+              default:
+                wrap.appendChild(divMsg('assistant', escHtml(trunc(contentStr, 5000))));
+            }
+            container.appendChild(wrap);
+          });
+        } catch (e) {
+          showError('渲染失败: ' + (e.message || ''));
+          return;
+        }
+      }
+
+      function divMsg(cls, inner) {
+        var d = document.createElement('div');
+        d.className = 'msg ' + cls;
+        d.innerHTML = '<div class="chat-msg-text">' + inner + '</div>';
+        return d;
+      }
+
+      function contentText(m) {
+        var c = m.content;
+        if (!c) return '';
+        if (typeof c === 'string') return c;
+        try { return JSON.stringify(c); } catch (e) { return String(c); }
+      }
+
+      function escHtml(s) {
+        if (!s) return '';
+        s = String(s);
+        return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+      }
+
+      function trunc(s, n) {
+        if (!s) return '';
+        s = String(s);
+        return s.length > n ? s.substring(0, n) + '...' : s;
+      }
+    })();
+  </script>
+</body>
+
+</html>
