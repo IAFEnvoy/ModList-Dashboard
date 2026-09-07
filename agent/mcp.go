@@ -106,6 +106,17 @@ func CheckRuntimes() {
 		log.Printf("[MCP] ✓ uvx: %s", strings.TrimSpace(uvxVer))
 	}
 
+	ffmpegVer, hasFFmpeg := tryCommand("ffmpeg", "-version")
+	if hasFFmpeg {
+		verLine := strings.TrimSpace(ffmpegVer)
+		if i := strings.IndexByte(verLine, '\n'); i >= 0 {
+			verLine = verLine[:i]
+		}
+		log.Printf("[MCP] ✓ ffmpeg: %s", verLine)
+	} else {
+		log.Printf("[MCP] ✗ ffmpeg 未安装或不在 PATH 中。模组图标上传时将直接保存原图。")
+	}
+
 	log.Printf("[MCP] =============================")
 }
 

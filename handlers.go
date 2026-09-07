@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"math"
 	"modlist-dashboard/agent"
 	"net/http"
@@ -157,11 +158,22 @@ func handleAdminModLogo(w http.ResponseWriter, r *http.Request, id string) {
 		writeJSONError(w, "不支持的图片类型，请上传 webp/png/jpeg/gif/avif/svg", http.StatusBadRequest)
 		return
 	}
-	if err := upsertModLogo(id, data, mime); err != nil {
+	storeMime := mime
+	if ffmpegAvailable && ext != "svg" && ext != "webp" {
+		if converted, convErr := convertImageToWebp(data, ext); convErr != nil {
+			log.Printf("[Logo] 模组 %s 转 webp 失败，直接保存原图: %v", id, convErr)
+		} else {
+			storeMime = "image/webp"
+			data = converted
+			log.Printf("[Logo] 模组 %s 已通过 ffmpeg 转为 webp 后入库", id)
+		}
+	}
+	if err := upsertModLogo(id, data, storeMime); err != nil {
 		writeJSONError(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	logoName := id + "." + ext
+	_, storeExt := normalizeImageMime(storeMime)
+	logoName := id + "." + storeExt
 	if meta, ok := getModMeta(id); ok {
 		meta.Logo = logoName
 		replaceModMeta(meta)

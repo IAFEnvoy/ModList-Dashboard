@@ -27,13 +27,17 @@ function openDetail(modId) {
   if (mod.ids?.cf) linksHtml += `<a class="cf-link-d" href="https://www.curseforge.com/projects/${mod.ids.cf}" target="_blank">CurseForge</a>`;
   if (mod.ids?.wiki) linksHtml += `<a class="wiki-link-d" href="${mod.ids.wiki}" target="_blank">Wiki</a>`;
   if (mod.ids?.cf) idsHtml += `<button type="button" class="detail-id-copy cf-id-copy" data-id-source="cf" title="${esc(t('copyCfId'))}"><span>CF ID</span><code>${esc(mod.ids.cf)}</code><span class="detail-id-copy-state">${esc(t('copy'))}</span></button>`;
+  const license = (mod.mod_meta && mod.mod_meta.license) || '';
+  if (license) idsHtml += `<button type="button" class="detail-id-copy license-id-copy" data-id-source="license" title="${esc(t('copyLicense'))}"><span>LICENSE</span><code>${esc(license)}</code><span class="detail-id-copy-state">${esc(t('copy'))}</span></button>`;
   const coop = mod.coop || [];
   $('#detailCoop').innerHTML = coop.length ? `<span class="coop-label">${t('coAuthor')}</span>` + coop.map(c => `<a class="coop-link" href="https://github.com/${c}" target="_blank">@${esc(c)}</a>`).join('') : '';
 
   $('#detailLinks').innerHTML = `<div class="detail-platform-links">${linksHtml}</div>${idsHtml ? `<div class="detail-id-links">${idsHtml}</div>` : ''}`;
   $('#detailLinks').querySelectorAll('.detail-id-copy').forEach(button => {
     button.addEventListener('click', () => {
-      const value = button.dataset.idSource === 'cf' ? ((mod.ids && mod.ids.cf) || '') : ((mod.mod_meta && mod.mod_meta.id) || mod.id || '');
+      const value = button.dataset.idSource === 'cf' ? ((mod.ids && mod.ids.cf) || '')
+        : button.dataset.idSource === 'license' ? ((mod.mod_meta && mod.mod_meta.license) || '')
+          : ((mod.mod_meta && mod.mod_meta.id) || mod.id || '');
       copyDetailId(button, value);
     });
   });

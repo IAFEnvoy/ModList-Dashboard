@@ -182,5 +182,6 @@
   "copied": "Copied",
   "copyFailed": "Copy failed",
   "copyCfId": "Copy CurseForge ID",
-  "copyModId": "Copy MOD ID"
+  "copyModId": "Copy MOD ID",
+  "copyLicense": "Copy License"
 }

@@ -14,6 +14,7 @@ import (
 )
 
 func main() {
+	initFFmpeg()
 	ensureConfigFiles()
 	loadConfig("config/config.yml", &config)
 	LoadProjectPaths(config.ProjectPaths)

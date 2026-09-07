@@ -182,5 +182,6 @@
   "copied": "已复制",
   "copyFailed": "复制失败",
   "copyCfId": "复制 CurseForge ID",
-  "copyModId": "复制 MOD ID"
+  "copyModId": "复制 MOD ID",
+  "copyLicense": "复制 License"
 }
