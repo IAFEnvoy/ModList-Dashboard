@@ -26,21 +26,31 @@ func TestMarkRepoArchivedUsesCurrentModStatus(t *testing.T) {
 	})
 
 	info := &GitHubInfo{
-		Issues:       []GitHubItem{{Number: 1}, {Number: 2}},
-		PullRequests: []GitHubItem{{Number: 3}},
+		OpenIssues:   99, // 模拟缓存里过期的统计值
+		OpenPRs:      99,
+		Issues:       []GitHubItem{{Number: 1, State: "open"}, {Number: 2, State: "closed"}, {Number: 3, State: "open"}},
+		PullRequests: []GitHubItem{{Number: 3, State: "open"}, {Number: 4, State: "closed"}},
 	}
 
 	markRepoArchived(info, "owner/dead")
+	if info.OpenIssues != 2 || info.OpenPRs != 1 {
+		t.Fatalf("archived repo open counts should reflect real open items: issues=%d prs=%d", info.OpenIssues, info.OpenPRs)
+	}
 	for i, item := range info.Issues {
 		if !item.Archived {
 			t.Fatalf("issue %d of archived repo is not marked archived", i)
 		}
 	}
-	if !info.PullRequests[0].Archived {
-		t.Fatal("PR of archived repo is not marked archived")
+	for _, item := range info.PullRequests {
+		if !item.Archived {
+			t.Fatal("PR of archived repo is not marked archived")
+		}
 	}
 
 	markRepoArchived(info, "owner/live")
+	if info.OpenIssues != 2 || info.OpenPRs != 1 {
+		t.Fatalf("maintained repo open counts changed unexpectedly: issues=%d prs=%d", info.OpenIssues, info.OpenPRs)
+	}
 	for i, item := range info.Issues {
 		if item.Archived {
 			t.Fatalf("issue %d of maintained repo is marked archived", i)

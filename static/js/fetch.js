@@ -60,3 +60,43 @@ function updateStats() {
   $('#statIssues').textContent = state.totalIssues;
   $('#statPRs').textContent = state.totalPRs;
 }
+
+// 刷新按钮：从后端重新拉取数据，无需刷新整个页面
+function setupRefreshButtons() {
+  const modsBtn = document.getElementById('modsRefreshBtn');
+  const githubBtn = document.getElementById('githubRefreshBtn');
+  if (modsBtn) modsBtn.addEventListener('click', () => refreshLiveData(modsBtn));
+  if (githubBtn) githubBtn.addEventListener('click', () => refreshLiveData(githubBtn));
+}
+
+async function refreshLiveData(btn) {
+  if (btn && btn.disabled) return;
+  if (btn) { btn.disabled = true; btn.classList.add('spinning'); }
+  try {
+    const [modsRes, orderRes, cfgRes] = await Promise.all([
+      fetch('/api/mods'), fetch('/api/status-order'), fetch('/api/config'),
+    ]);
+    if (!modsRes.ok || !orderRes.ok || !cfgRes.ok) throw new Error('refresh failed');
+    state.mods = await modsRes.json();
+    const orderData = await orderRes.json();
+    state.statusOrder = orderData.order || [];
+    state.statusArchived = orderData.archived || [];
+    state.publicConfig = await cfgRes.json();
+
+    aggregateGitHub();
+    updateStats();
+    populateFilters();
+
+    if (state.currentPage === 'mods') {
+      renderList();
+      if (state.currentView === 'scatter' && typeof renderScatter === 'function') renderScatter();
+    } else if (state.currentPage === 'github' || state.currentPage === 'issues') {
+      renderGitHubPanel();
+    }
+  } catch (err) {
+    console.error('Refresh failed:', err);
+    alert(t('loadingFailed'));
+  } finally {
+    if (btn) { btn.disabled = false; btn.classList.remove('spinning'); }
+  }
+}

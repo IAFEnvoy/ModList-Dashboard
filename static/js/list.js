@@ -77,9 +77,12 @@ function setupFilters() {
 }
 
 function populateFilters() {
-  const statuses = [...new Set(state.mods.map(m => m.status).filter(Boolean))];
   const statusSel = $('#statusFilter');
+  const current = statusSel.value;
+  [...statusSel.options].forEach(opt => { if (opt.value !== 'all') opt.remove(); });
+  const statuses = [...new Set(state.mods.map(m => m.status).filter(Boolean))];
   statuses.forEach(s => { const o = document.createElement('option'); o.value = s; o.textContent = s; statusSel.appendChild(o); });
+  statusSel.value = statuses.includes(current) ? current : 'all';
 }
 
 function renderList() {

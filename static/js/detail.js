@@ -12,12 +12,15 @@ function openDetail(modId) {
   $('#detailName').textContent = mod.name;
   $('#detailDesc').textContent = mod.description || '';
 
-  const tags = [mod.status, ...(mod.tags || [])].filter(Boolean);
-  $('#detailTags').innerHTML = tags.map(tag => {
+  const statusHtml = mod.status
+    ? `<span class="mod-tag tag-status ${getStatusClass(mod.status)}">${esc(t('status_' + mod.status.replace(/\s+/g, '')))}</span>`
+    : '';
+  const restTagsHtml = (mod.tags || []).filter(Boolean).map(tag => {
     const isStatus = isStatusValue(tag);
     const label = isStatus ? t('status_' + tag.replace(/\s+/g, '')) : tag;
     return `<span class="mod-tag ${isStatus ? `tag-status ${getStatusClass(tag)}` : 'tag-down'}">${esc(label)}</span>`;
-  }).join('') + `<span class="mod-tag tag-down">${t('difficulty')}: ${mod.difficulty}</span>`;
+  }).join('');
+  $('#detailTags').innerHTML = statusHtml + `<span class="mod-tag tag-down">${t('difficulty')}: ${mod.difficulty}</span>` + restTagsHtml;
 
   let linksHtml = '';
   let idsHtml = '';

@@ -39,12 +39,12 @@
   "ttCFDownloads": "CF下载",
   "ttStatus": "状态",
   "ttArchitecture": "架构",
-  "fullySupported": "Fully Supported",
-  "partlySupported": "Partly Supported",
-  "planned": "Planned",
-  "bugFixOnly": "Bug Fix Only",
-  "ended": "Ended",
-  "none": "None",
+  "fullySupported": "完全支持",
+  "partlySupported": "部分支持",
+  "planned": "计划支持",
+  "bugFixOnly": "仅修复 Bug",
+  "ended": "已停止支持",
+  "none": "暂无支持计划",
   "loadingFailed": "数据加载失败，请确保后端服务已启动",
   "versionConnector": "~",
   "coAuthor": "Co-Author: ",
@@ -183,5 +183,6 @@
   "copyFailed": "复制失败",
   "copyCfId": "复制 CurseForge ID",
   "copyModId": "复制 MOD ID",
-  "copyLicense": "复制 License"
+  "copyLicense": "复制 License",
+  "refresh": "刷新数据"
 }

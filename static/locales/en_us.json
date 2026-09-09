@@ -41,10 +41,10 @@
   "ttArchitecture": "Architecture",
   "fullySupported": "Fully Supported",
   "partlySupported": "Partly Supported",
-  "planned": "Planned",
+  "planned": "Planned Supported",
   "bugFixOnly": "Bug Fix Only",
-  "ended": "Ended",
-  "none": "None",
+  "ended": "Ended Supported",
+  "none": "No Support Planned",
   "loadingFailed": "Data loading failed. Please ensure the backend is running.",
   "versionConnector": "~",
   "coAuthor": "Co-Author: ",
@@ -183,5 +183,6 @@
   "copyFailed": "Copy failed",
   "copyCfId": "Copy CurseForge ID",
   "copyModId": "Copy MOD ID",
-  "copyLicense": "Copy License"
+  "copyLicense": "Copy License",
+  "refresh": "Refresh Data"
 }

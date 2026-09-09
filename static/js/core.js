@@ -58,6 +58,21 @@ function getVersionIcon(value) {
   return option ? option.emoji : '';
 }
 
+// 版本支持状态 → i18n 文案键（与配置 icons.versions 的值对应）
+const versionLegendKeys = { All: 'fullySupported', Partly: 'partlySupported', Planned: 'planned', BugFix: 'bugFixOnly', Ended: 'ended', None: 'none' };
+
+// 先走 t() 本地化；未配置翻译或配置值不在标准键内时回退到配置映射文本 option.text
+function versionStatusLabel(value) {
+  if (!value) return '';
+  const option = versionOptions().find(o => o.value === value);
+  const labelKey = versionLegendKeys[value];
+  if (labelKey) {
+    const localized = t(labelKey);
+    if (localized && localized !== labelKey) return localized;
+  }
+  return option ? (option.text || option.value) : value;
+}
+
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => document.querySelectorAll(s);
 
@@ -198,19 +213,17 @@ function buildVersionTable(versions) {
   const versionKeys = Object.keys(versions).sort().reverse();
   const usedStatus = new Set();
   versionKeys.forEach(vc => Object.values(versions[vc] || {}).forEach(s => usedStatus.add(s)));
-  const versionLegendKeys = { All: 'fullySupported', Partly: 'partlySupported', Planned: 'planned', BugFix: 'bugFixOnly', Ended: 'ended', None: 'none' };
   let html = '<div class="version-legend">';
   versionOptions().forEach(option => {
     if (!usedStatus.has(option.value)) return;
-    const labelKey = versionLegendKeys[option.value] || option.value;
-    html += '<span>' + option.emoji + ' ' + esc(t(labelKey)) + '</span>';
+    html += '<span>' + option.emoji + ' ' + esc(versionStatusLabel(option.value)) + '</span>';
   });
   html += '</div><table class="version-table"><thead><tr><th>' + t('mcVersion') + '</th>';
   loaders.forEach(l => { html += `<th>${esc(l)}</th>`; });
   html += '</tr></thead><tbody>';
   versionKeys.forEach(vc => {
     html += `<tr><td>${vc}</td>`;
-    loaders.forEach(l => { const s = (versions[vc] || {})[l] || ''; html += `<td title="${s}">${getVersionIcon(s)}</td>`; });
+    loaders.forEach(l => { const s = (versions[vc] || {})[l] || ''; html += `<td title="${esc(versionStatusLabel(s))}">${getVersionIcon(s)}</td>`; });
     html += '</tr>';
   });
   html += '</tbody></table>';
@@ -287,6 +300,7 @@ function setupSidebarToggle() {
 document.addEventListener('DOMContentLoaded', async () => {
   setupViewToggle();
   setupFilters();
+  setupRefreshButtons();
   setupDetailClose();
   setupGitHubTabs();
   setupScatterToggle();

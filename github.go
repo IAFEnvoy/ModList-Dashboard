@@ -433,15 +433,14 @@ func fetchGitHubInfo(repoPath string) *GitHubInfo {
 	issues, prs := fetchGitHubAll(parts[0], parts[1])
 
 	openIssues := 0
-	archived := isRepoArchived(parts[0], parts[1])
 	for _, i := range issues {
-		if i.State == "open" && !archived {
+		if i.State == "open" {
 			openIssues++
 		}
 	}
 	openPRs := 0
 	for _, p := range prs {
-		if p.State == "open" && !archived {
+		if p.State == "open" {
 			openPRs++
 		}
 	}
@@ -463,18 +462,29 @@ func isRepoArchived(owner, repo string) bool {
 
 // markRepoArchived 根据本地模组状态为仓库内每条 Issue/PR 打上 archived 标记，
 // 使前端能立即按“已归档”过滤，无需等待 GitHub 缓存过期或手动刷新。
+// 同时按条目重新计算 open 数量：open_issues/open_prs 表示仓库真实打开的条目数，
+// 不受本地归档影响（归档只用于前端列表过滤，避免缓存里存着过期的统计）。
 func markRepoArchived(info *GitHubInfo, repoPath string) {
 	if info == nil || repoPath == "" {
 		return
 	}
 	owner, repo, ok := strings.Cut(repoPath, "/")
 	archived := ok && isRepoArchived(owner, repo)
+	openIssues, openPRs := 0, 0
 	for i := range info.Issues {
 		info.Issues[i].Archived = archived
+		if info.Issues[i].State == "open" {
+			openIssues++
+		}
 	}
 	for i := range info.PullRequests {
 		info.PullRequests[i].Archived = archived
+		if info.PullRequests[i].State == "open" {
+			openPRs++
+		}
 	}
+	info.OpenIssues = openIssues
+	info.OpenPRs = openPRs
 }
 
 // ========== GitHub Issue / PR 详情 ==========
