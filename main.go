@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"modlist-dashboard/agent"
+	"modlist-dashboard/badge"
 )
 
 func main() {
@@ -54,6 +55,9 @@ func main() {
 	// 初始化网盘目录
 	initDrive()
 
+	// 注入徽章包依赖：模组元数据、缓存、上游抓取、配置与内嵌资源
+	initBadge()
+
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/mods", corsMiddleware(handleModsList))
 	mux.HandleFunc("/api/mods/", corsMiddleware(handleModDetail))
@@ -63,6 +67,7 @@ func main() {
 	mux.HandleFunc("/api/github/pr/", corsMiddleware(withAuth(handleGitHubPR)))
 	mux.HandleFunc("/api/github/", corsMiddleware(handleGitHub))
 	mux.HandleFunc("/api/logo/", corsMiddleware(handleModLogo))
+	mux.HandleFunc(badgePrefixPath(), corsMiddleware(badge.Handler))
 	mux.HandleFunc("/api/status-order", corsMiddleware(handleStatusOrder))
 	mux.HandleFunc("/api/config", corsMiddleware(handlePublicConfig))
 	mux.HandleFunc("/api/auth/login", corsMiddleware(handleLogin))

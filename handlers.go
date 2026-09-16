@@ -9,6 +9,7 @@ import (
 	"log"
 	"math"
 	"modlist-dashboard/agent"
+	"modlist-dashboard/badge"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -221,7 +222,7 @@ func handleGitHub(w http.ResponseWriter, r *http.Request) {
 	ttl := ttlCache()
 	info := getGitHubInfoCached(owner+"/"+repo, ttl)
 	if info == nil {
-		json.NewEncoder(w).Encode(GitHubInfo{})
+		json.NewEncoder(w).Encode(badge.GitHubInfo{})
 		return
 	}
 	if subType == "issues" {
@@ -526,7 +527,7 @@ func buildModsDashboard() []ModDashboard {
 			diff := finalDifficulty(meta)
 
 			var cfDownloads int64
-			var ghInfo *GitHubInfo
+			var ghInfo *badge.GitHubInfo
 			var innerWg sync.WaitGroup
 			innerWg.Add(2)
 
@@ -588,7 +589,7 @@ func buildSingleModDashboard(meta ModMeta) ModDashboard {
 	}
 
 	var cfDownloads int64
-	var ghInfo *GitHubInfo
+	var ghInfo *badge.GitHubInfo
 	var wg sync.WaitGroup
 	wg.Add(2)
 
@@ -884,11 +885,14 @@ func handleFlushCache(w http.ResponseWriter, r *http.Request) {
 	}
 	json.NewDecoder(r.Body).Decode(&body)
 
-	prefixes := map[string]string{
-		"curseforge": "cf:",
-		"github":     "gh:",
-		"codacy":     "codacy:",
+	// 每个数据源对应一个或多个缓存键前缀。
+	// ghdl:（GitHub Release 下载量）与 gh:（仓库 Issues/PR）相互独立，但同属 github 数据源。
+	prefixes := map[string][]string{
+		"curseforge": {"cf:"},
+		"github":     {badge.CacheKeyPrefix, "ghdl:"},
+		"codacy":     {"codacy:"},
 	}
+	dirMap := map[string]string{"cf:": "curseforge", badge.CacheKeyPrefix: "github", "ghdl:": "github", "codacy:": "codacy"}
 
 	flushByPrefix := func(prefix string) int {
 		count := 0
@@ -900,7 +904,6 @@ func handleFlushCache(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		cacheMu.Unlock()
-		dirMap := map[string]string{"cf:": "curseforge", "gh:": "github", "codacy:": "codacy"}
 		if dir, ok := dirMap[prefix]; ok {
 			cacheDir := filepath.Join(config.Server.cacheDir(), dir)
 			os.RemoveAll(cacheDir) // 递归删除整个平台缓存目录
@@ -910,11 +913,15 @@ func handleFlushCache(w http.ResponseWriter, r *http.Request) {
 
 	cleared := 0
 	if body.Source == "all" {
-		for _, p := range prefixes {
-			cleared += flushByPrefix(p)
+		for _, list := range prefixes {
+			for _, prefix := range list {
+				cleared += flushByPrefix(prefix)
+			}
 		}
-	} else if p, ok := prefixes[body.Source]; ok {
-		cleared += flushByPrefix(p)
+	} else if list, ok := prefixes[body.Source]; ok {
+		for _, prefix := range list {
+			cleared += flushByPrefix(prefix)
+		}
 	} else if body.Source != "db" && body.Source != "reload" {
 		http.Error(w, `{"error":"invalid source"}`, http.StatusBadRequest)
 		return

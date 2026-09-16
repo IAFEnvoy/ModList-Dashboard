@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"modlist-dashboard/badge"
 	"net/http"
 	"os"
 	"os/exec"
@@ -16,16 +17,16 @@ import (
 
 // ========== GitHub 缓存入口 ==========
 
-func getGitHubInfoCached(repoPath string, ttl time.Duration) *GitHubInfo {
+func getGitHubInfoCached(repoPath string, ttl time.Duration) *badge.GitHubInfo {
 	if repoPath == "" || !dsEnabled("github") {
 		return nil
 	}
-	cacheKey := "gh:" + repoPath
+	cacheKey := badge.CacheKeyPrefix + repoPath
 
 	// 读取缓存（含过期状态）
 	v, found, stale := readCacheStale(cacheKey)
 	if found && v != nil {
-		info := v.(*GitHubInfo)
+		info := v.(*badge.GitHubInfo)
 		if stale {
 			// 后台异步刷新
 			log.Printf("[~] [%s] 缓存已过期，先返回旧数据并后台刷新", cacheKey)
@@ -425,7 +426,7 @@ func parsePRsFromBody(body []byte) []GitHubItem {
 	return prs
 }
 
-func fetchGitHubInfo(repoPath string) *GitHubInfo {
+func fetchGitHubInfo(repoPath string) *badge.GitHubInfo {
 	parts := strings.SplitN(repoPath, "/", 2)
 	if len(parts) != 2 {
 		return nil
@@ -444,7 +445,72 @@ func fetchGitHubInfo(repoPath string) *GitHubInfo {
 			openPRs++
 		}
 	}
-	return &GitHubInfo{OpenIssues: openIssues, OpenPRs: openPRs, Issues: issues, PullRequests: prs}
+	info := &badge.GitHubInfo{OpenIssues: openIssues, OpenPRs: openPRs, Issues: issues, PullRequests: prs}
+	info.RefreshDerivedCounts()
+	return info
+}
+
+// ========== GitHub Release 下载量（徽章用） ==========
+
+// maxReleasePages 限制 Release 分页抓取上限，避免超大仓库拖垮单次刷新。
+const maxReleasePages = 10
+
+// fetchGitHubReleaseDownloads 汇总仓库所有 Release 中每个资源的下载次数。
+// 任一分页请求失败即返回 0，避免把不完整的合计当成真实值写进缓存。
+func fetchGitHubReleaseDownloads(owner, repo string) int64 {
+	token := authConfig.gitHubToken(owner)
+	if token == "" || !dsEnabled("github") {
+		return 0
+	}
+	httpClient := &http.Client{Timeout: 30 * time.Second}
+	var total int64
+
+	for page := 1; page <= maxReleasePages; page++ {
+		url := fmt.Sprintf("https://api.github.com/repos/%s/%s/releases?per_page=100&page=%d", owner, repo, page)
+		ghRateBeforeRequest(owner)
+		req, err := http.NewRequest("GET", url, nil)
+		if err != nil {
+			return 0
+		}
+		setGHHeaders(req, token)
+
+		ghLimiter <- struct{}{}
+		resp, err := httpClient.Do(req)
+		<-ghLimiter
+		if err != nil {
+			log.Printf("[X] GitHub Release 网络错误 (%s/%s page=%d): %v", owner, repo, page, err)
+			return 0
+		}
+		body, _ := io.ReadAll(resp.Body)
+		resp.Body.Close()
+		ghRateAfterResponse(owner, resp)
+
+		if resp.StatusCode != 200 {
+			log.Printf("[X] GitHub Release 返回 %d (%s/%s page=%d)，放弃统计", resp.StatusCode, owner, repo, page)
+			return 0
+		}
+
+		var releases []struct {
+			Assets []struct {
+				DownloadCount int64 `json:"download_count"`
+			} `json:"assets"`
+		}
+		if err := json.Unmarshal(body, &releases); err != nil {
+			log.Printf("[X] GitHub Release 解析失败 (%s/%s page=%d): %v", owner, repo, page, err)
+			return 0
+		}
+		for _, release := range releases {
+			for _, asset := range release.Assets {
+				total += asset.DownloadCount
+			}
+		}
+		if len(releases) < 100 {
+			break
+		}
+	}
+
+	log.Printf("[√] GitHub Release 下载量 (%s/%s): %d", owner, repo, total)
+	return total
 }
 
 // ========== GitHub 仓库归档状态（本地配置） ==========
@@ -464,7 +530,7 @@ func isRepoArchived(owner, repo string) bool {
 // 使前端能立即按“已归档”过滤，无需等待 GitHub 缓存过期或手动刷新。
 // 同时按条目重新计算 open 数量：open_issues/open_prs 表示仓库真实打开的条目数，
 // 不受本地归档影响（归档只用于前端列表过滤，避免缓存里存着过期的统计）。
-func markRepoArchived(info *GitHubInfo, repoPath string) {
+func markRepoArchived(info *badge.GitHubInfo, repoPath string) {
 	if info == nil || repoPath == "" {
 		return
 	}
@@ -485,6 +551,8 @@ func markRepoArchived(info *GitHubInfo, repoPath string) {
 	}
 	info.OpenIssues = openIssues
 	info.OpenPRs = openPRs
+	// 派生计数也要跟着重算，保证徽章里的分状态数字与条目一致。
+	info.RefreshDerivedCounts()
 }
 
 // ========== GitHub Issue / PR 详情 ==========

@@ -1,6 +1,10 @@
 package main
 
-import "testing"
+import (
+	"testing"
+
+	"modlist-dashboard/badge"
+)
 
 func TestMarkRepoArchivedUsesCurrentModStatus(t *testing.T) {
 	prevArchived := statusConfig.Archived
@@ -25,11 +29,11 @@ func TestMarkRepoArchivedUsesCurrentModStatus(t *testing.T) {
 		modMetaMu.Unlock()
 	})
 
-	info := &GitHubInfo{
+	info := &badge.GitHubInfo{
 		OpenIssues:   99, // 模拟缓存里过期的统计值
 		OpenPRs:      99,
-		Issues:       []GitHubItem{{Number: 1, State: "open"}, {Number: 2, State: "closed"}, {Number: 3, State: "open"}},
-		PullRequests: []GitHubItem{{Number: 3, State: "open"}, {Number: 4, State: "closed"}},
+		Issues:       []badge.GitHubItem{{Number: 1, State: "open"}, {Number: 2, State: "closed"}, {Number: 3, State: "open"}},
+		PullRequests: []badge.GitHubItem{{Number: 3, State: "open"}, {Number: 4, State: "closed"}},
 	}
 
 	markRepoArchived(info, "owner/dead")

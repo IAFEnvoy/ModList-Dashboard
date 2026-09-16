@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"modlist-dashboard/badge"
 	"os"
 	"path/filepath"
 	"strings"
@@ -75,6 +76,35 @@ func writeCacheString(key string, val string, ttl time.Duration) {
 	writeCache(key, val, ttl)
 }
 
+// ========== 按键去重的后台刷新 ==========
+
+// refreshingKeys 记录正在后台刷新的缓存键，保证同一条缓存不会被并发重复拉取。
+var (
+	refreshingMu   sync.Mutex
+	refreshingKeys = make(map[string]bool)
+)
+
+// refreshCacheAsync 在后台刷新单条缓存，同一个键的并发调用只会真正执行一次。
+// 与 prewarmCache 的全量预热不同，这里只处理调用方指定的那一个键。
+func refreshCacheAsync(key string, fetch func()) {
+	refreshingMu.Lock()
+	if refreshingKeys[key] {
+		refreshingMu.Unlock()
+		return
+	}
+	refreshingKeys[key] = true
+	refreshingMu.Unlock()
+
+	go func() {
+		defer func() {
+			refreshingMu.Lock()
+			delete(refreshingKeys, key)
+			refreshingMu.Unlock()
+		}()
+		fetch()
+	}()
+}
+
 // ========== TTL / 路径 ==========
 
 func ttlCache() time.Duration {
@@ -86,10 +116,15 @@ func ttlCache() time.Duration {
 }
 
 // cacheFilePath 生成分层缓存文件路径。
-// cf:12345           → cache/curseforge/12345.json
-// gh:owner/repo      → cache/github/owner/repo/meta.json
-// codacy:owner/repo  → cache/codacy/owner/repo/score.json
-// codacy_added:o/r   → cache/codacy/owner/repo/added.json
+// cf:12345            → cache/curseforge/12345.json
+// gh2:owner/repo      → cache/github/owner/repo/meta2.json
+// ghdl:owner/repo     → cache/github/owner/repo/downloads.json
+// codacy:owner/repo   → cache/codacy/owner/repo/score.json
+// codacy_added:o/r    → cache/codacy/owner/repo/added.json
+//
+// gh 缓存键带版本号（当前 gh2）：条目里除了 open 计数还派生了
+// not_planned / closed / draft 计数，旧版本的条目没有这些字段，
+// 靠换键让旧数据自然失效，而不是读到一堆 0。
 func cacheFilePath(key string) string {
 	base := config.Server.cacheDir()
 
@@ -97,9 +132,12 @@ func cacheFilePath(key string) string {
 	switch {
 	case strings.HasPrefix(key, "cf:"):
 		return filepath.Join(base, "curseforge", key[3:]+".json")
-	case strings.HasPrefix(key, "gh:"):
-		repo := key[3:] // "owner/repo"
-		return filepath.Join(base, "github", filepath.FromSlash(repo), "meta.json")
+	case strings.HasPrefix(key, badge.CacheKeyPrefix):
+		repo := key[len(badge.CacheKeyPrefix):] // "owner/repo"
+		return filepath.Join(base, "github", filepath.FromSlash(repo), "meta2.json")
+	case strings.HasPrefix(key, "ghdl:"):
+		repo := key[5:] // "owner/repo"
+		return filepath.Join(base, "github", filepath.FromSlash(repo), "downloads.json")
 	case strings.HasPrefix(key, "codacy:"):
 		repo := key[7:]
 		return filepath.Join(base, "codacy", filepath.FromSlash(repo), "score.json")
@@ -206,7 +244,8 @@ func loadCacheFromDisk() int {
 			}
 			// 只恢复当前仍受支持的数据源缓存，避免历史平台数据继续进入内存。
 			if !strings.HasPrefix(key, "cf:") &&
-				!strings.HasPrefix(key, "gh:") &&
+				!strings.HasPrefix(key, badge.CacheKeyPrefix) &&
+				!strings.HasPrefix(key, "ghdl:") &&
 				!strings.HasPrefix(key, "codacy:") &&
 				!strings.HasPrefix(key, "codacy_added:") {
 				_ = os.Remove(fp)
@@ -246,7 +285,7 @@ func saveCacheToDisk(key string, val interface{}, ttl time.Duration) {
 	case bool:
 		d.Type = "bool"
 		d.BoolVal = v
-	case *GitHubInfo:
+	case *badge.GitHubInfo:
 		d.Type = "github"
 		d.GhVal = v
 	default:

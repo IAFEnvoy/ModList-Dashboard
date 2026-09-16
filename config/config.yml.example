@@ -30,3 +30,9 @@ codacy:
   cache_ttl_hours: 24
   provider: "gh"
   add_wait_minutes: 10
+
+# 徽章接口（/api/badge/...）的全局设置
+badges:
+  # /api/badge/discord 徽章链接到的 Discord 邀请地址，留空则该徽章返回 404
+  discord: ""
+

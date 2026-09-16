@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"math"
+	"modlist-dashboard/badge"
 	"os"
 	"strings"
 	"sync"
@@ -17,7 +18,14 @@ type Config struct {
 	DataSources  map[string]DataSourceConfig `yaml:"datasources"`
 	Retry        RetryConfig                 `yaml:"retry"`
 	Codacy       CodacyConfig                `yaml:"codacy"`
+	Badges       BadgesConfig                `yaml:"badges"`
 	ProjectPaths []string                    `yaml:"project_paths"`
+}
+
+// BadgesConfig 徽章接口的全局设置。
+type BadgesConfig struct {
+	// Discord 是所有模组徽章共用的 Discord 邀请链接（在 config/config.yml 配置）。
+	Discord string `yaml:"discord"`
 }
 
 // StatusConfig 状态配置（从 config/status_config.json 加载）
@@ -192,19 +200,12 @@ type ModMeta struct {
 
 type ModDashboard struct {
 	ModMeta
-	Difficulty     float64     `json:"difficulty"`
-	CFDownloads    int64       `json:"cf_downloads"`
-	TotalDownloads int64       `json:"total_downloads"`
-	Popularity     float64     `json:"popularity"`
-	GitHub         *GitHubInfo `json:"github,omitempty"`
-	HasCodacy      bool        `json:"has_codacy"`
-}
-
-type GitHubInfo struct {
-	OpenIssues   int          `json:"open_issues"`
-	OpenPRs      int          `json:"open_prs"`
-	Issues       []GitHubItem `json:"issues"`
-	PullRequests []GitHubItem `json:"pull_requests"`
+	Difficulty     float64           `json:"difficulty"`
+	CFDownloads    int64             `json:"cf_downloads"`
+	TotalDownloads int64             `json:"total_downloads"`
+	Popularity     float64           `json:"popularity"`
+	GitHub         *badge.GitHubInfo `json:"github,omitempty"`
+	HasCodacy      bool              `json:"has_codacy"`
 }
 
 var ProjectPaths []string
@@ -217,19 +218,7 @@ func LoadProjectPaths(paths []string) {
 	ProjectPaths = paths
 }
 
-type GitHubItem struct {
-	Number      int      `json:"number"`
-	Title       string   `json:"title"`
-	State       string   `json:"state"`
-	StateReason string   `json:"state_reason,omitempty"` // completed / not_planned / reopened (issues)
-	Draft       bool     `json:"draft"`
-	Merged      bool     `json:"merged"` // PR 是否已合并
-	URL         string   `json:"url"`
-	CreatedAt   string   `json:"created_at"`
-	User        string   `json:"user"`
-	Labels      []string `json:"labels"`
-	Archived    bool     `json:"archived"`
-}
+type GitHubItem = badge.GitHubItem
 
 // GitHubIssueDetail 单个 Issue 的完整内容（含 body）
 type GitHubIssueDetail struct {
@@ -406,11 +395,11 @@ var (
 )
 
 type diskCacheEntry struct {
-	Key      string      `json:"key"`
-	Type     string      `json:"type"`
-	IntVal   int64       `json:"int_val,omitempty"`
-	StrVal   string      `json:"str_val,omitempty"`
-	BoolVal  bool        `json:"bool_val,omitempty"`
-	GhVal    *GitHubInfo `json:"gh_val,omitempty"`
-	ExpireAt int64       `json:"expire_at"`
+	Key      string            `json:"key"`
+	Type     string            `json:"type"`
+	IntVal   int64             `json:"int_val,omitempty"`
+	StrVal   string            `json:"str_val,omitempty"`
+	BoolVal  bool              `json:"bool_val,omitempty"`
+	GhVal    *badge.GitHubInfo `json:"gh_val,omitempty"`
+	ExpireAt int64             `json:"expire_at"`
 }

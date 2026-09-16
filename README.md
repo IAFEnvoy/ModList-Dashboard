@@ -12,6 +12,7 @@ Full documentation (features, tech stack, storage layout): <https://docs.iafenvo
 - Admin-only management area with local config reload and cache flush actions
 - Optional built-in AI assistant panel (chat, file editing, MCP servers) powered by configurable LLM providers
 - Cloud drive area for storing per-agent session files
+- SVG badges for embedding in mod READMEs (downloads, issues/PRs, license, loaders, Discord, docs)
 - English and Chinese UI
 
 ## Repository layout
@@ -21,6 +22,8 @@ config/      Runtime YAML/JSON configs (.yml is local-only; see below)
 static/      Web UI (HTML/CSS/JS/images/locales)
 prompts/     Agent prompt templates (committed)
 agent/       Optional AI/MCP agent subsystem (Go package)
+badge/       Badge subsystem (own package: SVG templates, data sources, embedded assets)
+scripts/     Helper scripts (badge asset sync)
 data/        Runtime data, created automatically (mods.db, users.db, sessions.db, todos.json, drive/)
 cache/       HTTP cache, created automatically
 drive-mcp/   Standalone stdio MCP server exposing the cloud drive to AI tools (optional)
@@ -59,7 +62,7 @@ boots.
 
 | File | Purpose |
 | --- | --- |
-| `config/config.yml` | Server port, data source toggles, cache dir, local project paths, Codacy settings |
+| `config/config.yml` | Server port, data source toggles, cache dir, local project paths, Codacy settings, badge Discord invite |
 | `config/auth.yml` | CurseForge key, GitHub tokens, Codacy token, default admin account |
 | `config/ai.yml` | LLM providers for the AI panel (key may use `${ENV_NAME}`) |
 | `config/mcps.yml` | External MCP servers for the AI panel (empty by default) |
@@ -71,6 +74,41 @@ boots.
 
 > `config/configuration.json` and `config/status_config.json` contain no secrets
 > and are committed. Never commit the `*.yml` files with real tokens.
+
+## Badges
+
+Public SVG badges (no login required) for embedding in mod READMEs. `:slug` is a
+mod id from the library; an unknown slug returns `404`. Stats come from the
+existing cache — a stale entry is served immediately and only that single entry
+is refreshed in the background.
+
+| URL | Shows |
+| --- | --- |
+| `/api/badge/curseforge/downloads/:slug` | CurseForge downloads |
+| `/api/badge/github/downloads/:slug` | GitHub release asset downloads |
+| `/api/badge/github/issues/:slug` | Issues by state: Open / Done / Closed (not planned is folded into Closed) |
+| `/api/badge/github/prs/:slug` | PRs by state: Open / Merged / Draft / Closed |
+| `/api/badge/license/:slug` | The mod's license |
+| `/api/badge/powered-by/:slug` | The mod's own logo + name (for dependents to reference) |
+| `/api/badge/loader/fabric` \| `/forge` \| `/neoforge` | Loader support: "Available for" / loader name (two lines) |
+| `/api/badge/discord` | "Join our Discord" (needs `badges.discord` in `config.yml`) |
+| `/api/badge/docs/:slug` | "Read the Docs" (needs a wiki link on the mod) |
+
+Badges are images and cannot carry a link, so clickable ones pair with a
+redirect landing page to wrap in `<a href>`:
+
+```html
+<a href="/api/badge/link/docs/my-mod"><img src="/api/badge/docs/my-mod" alt="docs"></a>
+<a href="/api/badge/link/discord"><img src="/api/badge/discord" alt="discord"></a>
+<a href="/api/badge/link/powered-by/my-mod"><img src="/api/badge/powered-by/my-mod" alt="Powered by"></a>
+```
+
+`/api/badge/powered-by/:slug` embeds the mod's own logo as a base64 data URI, so
+the badge stays self-contained (no external image host required).
+
+Counts are rendered as full numbers with thousands separators (`8,755,344`)
+rather than `8.8M`-style abbreviations, so the exact value stays readable; the
+badge widens as needed instead of truncating.
 
 ## First run
 
@@ -122,3 +160,19 @@ boots.
 - The AI/MCP panel needs at least one valid provider in `config/ai.yml`.
 - External `stdio` MCP servers require Node.js (`npx`) to be installed.
 - The server listens on all interfaces at the configured port.
+- Badge endpoints are public by design so they can be embedded elsewhere.
+
+## Third-party assets
+
+Badge artwork is taken from
+[DevIn's Badges](https://github.com/intergrav/devins-badges) by intergrav,
+released under [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/).
+
+- `badge/assets/discord.svg` is the only embedded upstream file, served as-is by
+  `/api/badge/discord`.
+- Loader / documentation badges need two lines of text, which the upstream files
+  cannot express (their text is baked into vector paths), so only their icon
+  shapes and brand colours are reused — extracted into `badge_icons_gen.go`.
+- `scripts/sync-devins-badges.ps1` refreshes the Embedded Discord asset and
+  regenerates that file. Icon sources are downloaded to a temp directory and are
+  not kept in the repository.
