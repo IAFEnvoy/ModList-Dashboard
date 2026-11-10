@@ -260,7 +260,7 @@
     });
   }
 
-  // 从 config/editor.yml（经 /api/config）填充许可证 / 架构 / 标签预填下拉
+  // 从 /api/config 填充预填下拉：许可证来自 data/license/ 目录，架构与标签来自 config/editor.yml
   function configureFieldPresets(config) {
     state.presets.license = (config && config.license_options) || [];
     state.presets.architecture = (config && config.architecture_options) || [];

@@ -301,7 +301,7 @@ func handlePublicConfig(w http.ResponseWriter, r *http.Request) {
 		"loaders":              loaders,
 		"loader_colors":        loaderColors,
 		"version_options":      versionOptions,
-		"license_options":      presets.LicenseOptions,
+		"license_options":      licenseLibrary(),
 		"architecture_options": presets.ArchitectureOptions,
 		"tag_options":          presets.TagOptions,
 	})

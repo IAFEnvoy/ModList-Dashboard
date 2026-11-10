@@ -3,17 +3,54 @@ function setupLangSwitcher() {
   const btn = document.getElementById('langDropdownBtn');
   const menu = document.getElementById('langDropdownMenu');
   updateLangDropdown();
-  btn.addEventListener('click', (e) => { e.stopPropagation(); menu.classList.toggle('open'); document.getElementById('adminDropdownMenu').classList.remove('open'); });
+  btn.addEventListener('click', (e) => { e.stopPropagation(); menu.classList.toggle('open'); document.getElementById('adminDropdownMenu').classList.remove('open'); document.getElementById('licenseDropdownMenu').classList.remove('open'); });
   document.addEventListener('click', () => { menu.classList.remove('open'); });
   menu.querySelectorAll('.lang-option').forEach(opt => {
     opt.addEventListener('click', () => { setLang(opt.dataset.lang); menu.classList.remove('open'); });
   });
 }
 
+// 右上角「许可证下载」：条目来自 data/license/ 目录（文件名即许可证名），
+// 点击直接下载原文。目录为空时整个入口不显示。
+function setupLicenseDropdown() {
+  const dropdown = document.getElementById('licenseDropdown');
+  const btn = document.getElementById('licenseDropdownBtn');
+  const menu = document.getElementById('licenseDropdownMenu');
+  if (!dropdown || !btn || !menu) return;
+
+  btn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    menu.classList.toggle('open');
+    document.getElementById('langDropdownMenu').classList.remove('open');
+    document.getElementById('adminDropdownMenu').classList.remove('open');
+  });
+  document.addEventListener('click', () => menu.classList.remove('open'));
+
+  fetch('/api/config')
+    .then(r => r.json())
+    .then(config => {
+      const names = (config && config.license_options) || [];
+      if (!names.length) return;
+      menu.textContent = '';
+      names.forEach(name => {
+        const item = document.createElement('div');
+        item.className = 'lang-option';
+        item.textContent = name;
+        item.addEventListener('click', () => {
+          menu.classList.remove('open');
+          window.location.href = '/api/license/download?name=' + encodeURIComponent(name);
+        });
+        menu.appendChild(item);
+      });
+      dropdown.style.display = '';
+    })
+    .catch(() => { });
+}
+
 function setupAdminDropdown() {
   const btn = document.getElementById('adminDropdownBtn');
   const menu = document.getElementById('adminDropdownMenu');
-  btn.addEventListener('click', (e) => { e.stopPropagation(); menu.classList.toggle('open'); document.getElementById('langDropdownMenu').classList.remove('open'); });
+  btn.addEventListener('click', (e) => { e.stopPropagation(); menu.classList.toggle('open'); document.getElementById('langDropdownMenu').classList.remove('open'); document.getElementById('licenseDropdownMenu').classList.remove('open'); });
   document.addEventListener('click', () => { menu.classList.remove('open'); });
   menu.querySelectorAll('.admin-option').forEach(opt => {
     opt.addEventListener('click', async () => {

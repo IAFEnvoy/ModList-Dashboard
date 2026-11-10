@@ -83,6 +83,7 @@
   "adminReloadLocal": "Reload Local Config",
   "adminEditMods": "Edit Mods",
   "adminAccounts": "Account Settings",
+  "licenseDownload": "📄 License Download",
   "accountChangePassword": "Change Password",
   "accountCurrentPassword": "Current password",
   "accountNewPassword": "New password (at least 8 characters)",

@@ -83,6 +83,7 @@
   "adminReloadLocal": "重载本地配置",
   "adminEditMods": "编辑模组",
   "adminAccounts": "账户设置",
+  "licenseDownload": "📄 许可证下载",
   "accountChangePassword": "修改密码",
   "accountCurrentPassword": "当前密码",
   "accountNewPassword": "新密码（至少 8 位）",

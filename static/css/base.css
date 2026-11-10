@@ -232,6 +232,17 @@ option,
   color: var(--accent)
 }
 
+/* 许可证下载下拉：许可证名可能较长，菜单按内容撑开并允许滚动 */
+#licenseDropdownMenu {
+  min-width: 160px;
+  max-height: 60vh;
+  overflow-y: auto
+}
+
+#licenseDropdownMenu .lang-option {
+  white-space: nowrap
+}
+
 /* Admin */
 .admin-dropdown {
   position: relative;

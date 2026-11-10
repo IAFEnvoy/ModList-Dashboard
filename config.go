@@ -71,9 +71,9 @@ func loadStatusConfig() {
 	log.Printf("[Config] 状态配置: %d 个排序, %d 个归档 — %v", len(statusConfig.Order), len(statusConfig.Archived), statusConfig.Archived)
 }
 
-// editorFieldPresets 读取 config/editor.yml 的模组编辑器预填选项
+// editorFieldPresets 读取 config/editor.yml 的模组编辑器预填选项。
+// 许可证不在这里：它来自 data/license/ 目录（见 license.go）。
 type editorFieldPresets struct {
-	LicenseOptions      []string `yaml:"license_options"`
 	ArchitectureOptions []string `yaml:"architecture_options"`
 	TagOptions          []string `yaml:"tag_options"`
 }

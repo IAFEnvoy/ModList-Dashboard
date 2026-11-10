@@ -67,7 +67,8 @@ boots.
 | `config/ai.yml` | LLM providers for the AI panel (key may use `${ENV_NAME}`) |
 | `config/mcps.yml` | External MCP servers for the AI panel (empty by default) |
 | `config/rate.yml` | Difficulty scoring weights per version status / architecture |
-| `config/editor.yml` | Preset options for license / architecture / tags in the mod editor |
+| `config/editor.yml` | Preset options for architecture / tags in the mod editor |
+| `data/license/` | License texts: **file name = license name** (e.g. `MIT`, `Apache-2.0`). Drives the editor's license picker and the top-bar "License Download" menu |
 | `config/agents.yml` | Agent definitions (role, temperature, enabled tools) |
 | `config/status_config.json` | Mod status order and which statuses count as archived |
 | `config/configuration.json` | Colors and emoji used by the UI |

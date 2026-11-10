@@ -307,6 +307,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   setupStatsBar();
   setupSidebarToggle();
   setupLangSwitcher();
+  setupLicenseDropdown();
   setupAdminDropdown();
   await loadLocales();
   applyI18n();

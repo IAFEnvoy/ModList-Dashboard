@@ -55,6 +55,9 @@ func main() {
 	// 初始化网盘目录
 	initDrive()
 
+	// 初始化许可证库目录（data/license/，文件名即许可证名）
+	initLicenseLibrary()
+
 	// 注入徽章包依赖：模组元数据、缓存、上游抓取、配置与内嵌资源
 	initBadge()
 
@@ -70,6 +73,7 @@ func main() {
 	mux.HandleFunc(badgePrefixPath(), corsMiddleware(badge.Handler))
 	mux.HandleFunc("/api/status-order", corsMiddleware(handleStatusOrder))
 	mux.HandleFunc("/api/config", corsMiddleware(handlePublicConfig))
+	mux.HandleFunc("/api/license/download", corsMiddleware(handleLicenseDownload))
 	mux.HandleFunc("/api/auth/login", corsMiddleware(handleLogin))
 	mux.HandleFunc("/api/auth/status", corsMiddleware(handleAuthStatus))
 	mux.HandleFunc("/api/auth/password", corsMiddleware(withAuth(handleChangePassword)))

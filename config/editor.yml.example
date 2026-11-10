@@ -1,11 +1,8 @@
 # 模组编辑器的预填选项（下拉可选，也可手动输入）
-license_options:
-  - All Rights Reserved
-  - GPL-3.0
-  - LGPL-3.0
-  - LGPL-2.1
-  - Apache-2.0
-  - MIT
+#
+# 许可证不在这里配置：编辑器的许可证下拉与右上角「许可证下载」都直接扫描
+# data/license/ 目录，文件名即许可证名（如 MIT、Apache-2.0、LGPL-3.0），
+# 文件内容即该许可证的完整原文。
 
 architecture_options:
   - ModDevGradle
