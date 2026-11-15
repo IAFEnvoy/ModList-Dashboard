@@ -926,6 +926,7 @@ function switchAgentTab(view) {
   var cv = document.getElementById('agentChatView');
   var lv = document.getElementById('agentListView');
   var mv = document.getElementById('agentMcpView');
+  var sv = document.getElementById('agentSettingsView');
 
   // chat 视图：有对话显示聊天面板，无对话显示历史面板
   if (view === 'chat') {
@@ -946,6 +947,7 @@ function switchAgentTab(view) {
 
   if (lv) lv.style.display = view === 'agents' ? '' : 'none';
   if (mv) mv.style.display = view === 'mcps' ? '' : 'none';
+  if (sv) sv.style.display = view === 'settings' && state.loggedIn ? '' : 'none';
 
   if (view === 'agents') { fetchAgentSessions(true).then(function () { if (typeof renderAgentListView === 'function') renderAgentListView(); }); }
   else if (view === 'mcps') { if (typeof renderMcpView === 'function') renderMcpView(); }

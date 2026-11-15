@@ -139,4 +139,5 @@ function applyI18n() {
   });
 
   if (typeof updateLoginTxt === 'function') updateLoginTxt();
+  if (typeof renderBotBindings === 'function') renderBotBindings();
 }

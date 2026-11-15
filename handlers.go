@@ -928,6 +928,11 @@ func handleFlushCache(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// 后台重新预热
+	if body.Source == "all" || body.Source == "github" {
+		// A manual refresh uses the same successful-snapshot event as TTL
+		// refreshes. Only cache data is cleared; comparison/task state is kept.
+		notifyGitHubRefresh()
+	}
 	if body.Source == "all" || body.Source == "curseforge" || body.Source == "github" {
 		go prewarmCache()
 	}
@@ -938,6 +943,9 @@ func handleFlushCache(w http.ResponseWriter, r *http.Request) {
 	}
 
 	msg := fmt.Sprintf("已清除 %s 的 %d 条缓存，正在后台重新拉取", body.Source, cleared)
+	if body.Source == "all" || body.Source == "github" {
+		msg += "；已触发 GitHub 增量检查，保留 Issue 基线和处理记录"
+	}
 
 	if body.Source == "reload" {
 		loadConfig("config/config.yml", &config)
@@ -946,6 +954,10 @@ func handleFlushCache(w http.ResponseWriter, r *http.Request) {
 		loadDifficultyCache()
 		loadConfig("config/rate.yml", &rateConfig)
 		agent.LoadAll()
+		notifyGitHubRefresh()
+		if issuePreprocessor != nil {
+			issuePreprocessor.notify()
+		}
 		cleared = len(sortedModMetas())
 		msg = fmt.Sprintf("已重载本地配置（%d 个模组元数据 + rate.yml + mods.db 维护难度 + AI/Agent/MCP）", cleared)
 	}

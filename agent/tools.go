@@ -444,6 +444,9 @@ func BuildTools(def *AgentDef) []llms.Tool {
 	if def == nil {
 		return nil
 	}
+	if def.ID == IssuePreprocessorID {
+		return builtinToolsByIDs([]string{"read_only", "web"})
+	}
 	// 解析 mcps: 内置提供者 ID → 内置工具；其他 → MCP 服务器
 	var builtinIDs []string
 	for _, id := range def.MCPs {
@@ -548,6 +551,14 @@ var bypassSafeTools = map[string]bool{
 
 // RequestApproval 请求用户审批危险操作。返回 true=通过, false=拒绝。
 func RequestApproval(ctx context.Context, toolName string, argsJSON string) bool {
+	if !issuePreprocessToolAllowed(ctx, toolName) {
+		return false
+	}
+	// Automatic preprocessing must not wait for interactive approval to read
+	// an attachment. The role's allowlist above still rejects every write.
+	if isIssuePreprocessSession(ctx) {
+		return true
+	}
 	sessionID := execSessionID(ctx)
 	session := GetSession(sessionID)
 	if session == nil {
@@ -692,6 +703,9 @@ func safetyCheckShell(command string) string {
 
 // ExecuteTool 执行工具命令。cwd 为项目工作目录（可为空）。
 func ExecuteTool(ctx context.Context, name string, argsJSON string, cwd string) (string, error) {
+	if !issuePreprocessToolAllowed(ctx, name) {
+		return "", fmt.Errorf("Issue 预处理只允许只读工具，禁止调用 %s", name)
+	}
 	// MCP 工具调度（名称格式: mcpID__toolName）
 	if idx := strings.Index(name, "__"); idx > 0 {
 		mcpID := name[:idx]

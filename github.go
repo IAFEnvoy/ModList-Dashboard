@@ -30,21 +30,23 @@ func getGitHubInfoCached(repoPath string, ttl time.Duration) *badge.GitHubInfo {
 		if stale {
 			// 后台异步刷新
 			log.Printf("[~] [%s] 缓存已过期，先返回旧数据并后台刷新", cacheKey)
-			go func() {
-				newInfo := fetchGitHubInfo(repoPath)
-				if newInfo != nil {
-					writeCache(cacheKey, newInfo, ttl)
-				}
-			}()
+			refreshCacheAsync(cacheKey, func() { refreshGitHubInfo(repoPath, ttl) })
 		}
 		return info
 	}
 
 	// 缓存未命中 → 同步拉取（避免首次访问返回空）
 	log.Printf("[~] [%s] 缓存未命中，同步拉取", cacheKey)
+	return refreshGitHubInfo(repoPath, ttl)
+}
+
+func refreshGitHubInfo(repoPath string, ttl time.Duration) *badge.GitHubInfo {
 	info := fetchGitHubInfo(repoPath)
 	if info != nil {
-		writeCache(cacheKey, info, ttl)
+		// Persist the issue delta before publishing the new cache snapshot.
+		observeGitHubIssues(repoPath, info)
+		writeCache(badge.CacheKeyPrefix+repoPath, info, ttl)
+		notifyGitHubRefresh()
 	}
 	return info
 }
@@ -217,11 +219,11 @@ func setGHHeaders(req *http.Request, token string) {
 
 // ========== GitHub Issues/PRs 批量拉取 ==========
 
-func fetchGitHubAll(owner, repo string) ([]GitHubItem, []GitHubItem) {
+func fetchGitHubAll(owner, repo string) ([]GitHubItem, []GitHubItem, bool) {
 	token := authConfig.gitHubToken(owner)
 	if token == "" {
 		log.Printf("[!] 未配置 %s 的 GitHub Token，跳过 %s/%s", owner, owner, repo)
-		return nil, nil
+		return nil, nil, false
 	}
 
 	maxAttempts := config.Retry.attempts()
@@ -254,9 +256,12 @@ func fetchGitHubAll(owner, repo string) ([]GitHubItem, []GitHubItem) {
 				log.Printf("[X] Issues 网络错误 (%s/%s page=%d): %v", owner, repo, page, err)
 				continue
 			}
-			body, _ := io.ReadAll(resp.Body)
+			body, readErr := io.ReadAll(resp.Body)
 			resp.Body.Close()
 			ghRateAfterResponse(owner, resp)
+			if readErr != nil {
+				continue
+			}
 
 			if resp.StatusCode != 200 {
 				if resp.StatusCode == 429 || (resp.StatusCode == 403 && isRateLimited(owner)) {
@@ -267,17 +272,24 @@ func fetchGitHubAll(owner, repo string) ([]GitHubItem, []GitHubItem) {
 				}
 				if resp.StatusCode == 403 {
 					log.Printf("[X] Issues 403 (%s/%s page=%d): %s", owner, repo, page, string(body))
-					return nil, nil
+					return nil, nil, false
 				}
 				if !isRetryable(resp.StatusCode) {
 					log.Printf("[X] Issues 返回 %d (%s/%s page=%d)，不重试", resp.StatusCode, owner, repo, page)
-					return nil, nil
+					return nil, nil, false
 				}
 				log.Printf("[X] Issues 返回 %d (%s/%s page=%d)，重试中", resp.StatusCode, owner, repo, page)
 				continue
 			}
 
+			if !json.Valid(body) || !strings.HasPrefix(strings.TrimSpace(string(body)), "[") {
+				log.Printf("[X] Issues 响应无效 (%s/%s page=%d)", owner, repo, page)
+				return nil, nil, false
+			}
 			pageIssues, rawCount := parseIssuesFromBody(body)
+			if rawCount < 0 {
+				return nil, nil, false
+			}
 			issues = append(issues, pageIssues...)
 			// 用原始响应条数（不过滤 PR）判断是否最后一页，
 			// 因为 GitHub /issues 端点混入了 PR，过滤后数量虚低
@@ -287,7 +299,10 @@ func fetchGitHubAll(owner, repo string) ([]GitHubItem, []GitHubItem) {
 			ok = true
 			break
 		}
-		if !ok || lastPage {
+		if !ok {
+			return nil, nil, false
+		}
+		if lastPage {
 			break
 		}
 	}
@@ -352,7 +367,7 @@ func fetchGitHubAll(owner, repo string) ([]GitHubItem, []GitHubItem) {
 		}
 	}
 
-	return issues, prs
+	return issues, prs, true
 }
 
 func parseIssuesFromBody(body []byte) ([]GitHubItem, int) {
@@ -371,7 +386,9 @@ func parseIssuesFromBody(body []byte) ([]GitHubItem, int) {
 		} `json:"labels"`
 		PullRequest *struct{} `json:"pull_request"`
 	}
-	json.Unmarshal(body, &raw)
+	if err := json.Unmarshal(body, &raw); err != nil {
+		return nil, -1
+	}
 	rawCount := len(raw)
 
 	var issues []GitHubItem
@@ -431,7 +448,10 @@ func fetchGitHubInfo(repoPath string) *badge.GitHubInfo {
 	if len(parts) != 2 {
 		return nil
 	}
-	issues, prs := fetchGitHubAll(parts[0], parts[1])
+	issues, prs, ok := fetchGitHubAll(parts[0], parts[1])
+	if !ok {
+		return nil
+	}
 
 	openIssues := 0
 	for _, i := range issues {
@@ -569,7 +589,8 @@ func fetchGitHubIssueDetail(owner, repo string, issueNumber int) *GitHubIssueDet
 	setGHHeaders(req, token)
 
 	ghLimiter <- struct{}{}
-	resp, err := http.DefaultClient.Do(req)
+	client := &http.Client{Timeout: 30 * time.Second}
+	resp, err := client.Do(req)
 	<-ghLimiter
 	if err != nil {
 		log.Printf("[X] GitHub Issue 详情网络错误 (%s/%s#%d): %v", owner, repo, issueNumber, err)

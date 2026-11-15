@@ -31,6 +31,9 @@ func RunAgent(rt *agentRuntime, session *ChatSession, userMsg string, cwd string
 
 	// 系统提示词（含子 Agent 调用说明 + 环境信息）
 	sysPrompt := buildAgentSystemPrompt(def)
+	if session.Agent == IssuePreprocessorID {
+		sysPrompt = expandPromptForSession(sysPrompt, session)
+	}
 	sysPrompt += "\n\n## 环境信息\n你运行在 Windows 系统上。shell_exec 使用 `cmd /c` 执行命令，请使用 Windows 命令（如 `type` 而非 `cat`，`dir` 而非 `ls`）。"
 	sysPrompt += "\n\n## 🔧 工具使用优先级（必须遵守）\n"
 	sysPrompt += "1. **内置只读工具优先**：read_file / read_files / list_files / file_search / grep_search 能满足需求时，不要用其他工具。\n"
@@ -117,6 +120,7 @@ func RunAgent(rt *agentRuntime, session *ChatSession, userMsg string, cwd string
 	if parentCtx != nil {
 		bg = parentCtx
 	}
+	bg = withExecSession(bg, session.ID)
 	lctx, cancel := context.WithTimeout(bg, 600*time.Second)
 	defer cancel()
 	reply, blocks, compTokens, promptTokens, err := runAgentLoop(lctx, rt, lcMsgs, temp, cwd, session.Provider, maxRounds, onChunk)
@@ -176,7 +180,7 @@ func runAgentLoop(ctx context.Context, rt *agentRuntime, messages []llms.Message
 			if lastText != "" {
 				blocks = append(blocks, ChatMessage{Type: "message", Content: lastText, Tokens: completionTokens})
 			}
-			if len(blocks) > 0 {
+			if len(blocks) > 0 && !isIssuePreprocessSession(ctx) {
 				return lastText, blocks, completionTokens, promptTokens, nil
 			}
 			return "", blocks, completionTokens, promptTokens, fmt.Errorf("请求超时或已取消: %w", ctx.Err())
@@ -192,18 +196,20 @@ func runAgentLoop(ctx context.Context, rt *agentRuntime, messages []llms.Message
 			if lastText != "" {
 				blocks = append(blocks, ChatMessage{Type: "message", Content: lastText, Tokens: completionTokens})
 			}
-			if len(blocks) > 0 {
+			if len(blocks) > 0 && !isIssuePreprocessSession(ctx) {
 				return lastText, blocks, completionTokens, promptTokens, nil
 			}
 			return "", blocks, completionTokens, promptTokens, fmt.Errorf("LLM 调用失败 (第%d轮): %w", round+1, err)
 		}
-		log.Printf("[LLM] 第%d轮完成 (choices=%d, toolCalls=%d)", round+1, len(resp.Choices), len(resp.Choices[0].ToolCalls))
 
 		// 提取本轮 token 消耗
 		completionTokens += extractTokensFromResponse(resp)
 		promptTokens = extractPromptTokens(resp) // 最后一轮即为全量 prompt tokens
 
 		if len(resp.Choices) == 0 {
+			if isIssuePreprocessSession(ctx) {
+				return "", blocks, completionTokens, promptTokens, fmt.Errorf("模型未返回预处理报告")
+			}
 			if lastText != "" {
 				return lastText, blocks, completionTokens, promptTokens, nil
 			}
@@ -211,6 +217,7 @@ func runAgentLoop(ctx context.Context, rt *agentRuntime, messages []llms.Message
 		}
 
 		text := resp.Choices[0].Content
+		log.Printf("[LLM] 第%d轮完成 (choices=%d, toolCalls=%d)", round+1, len(resp.Choices), len(resp.Choices[0].ToolCalls))
 
 		// 1. 检查原生 ToolCalls（由 WithTools 触发，已从流式输出中抑制）
 		if len(resp.Choices[0].ToolCalls) > 0 {
@@ -246,7 +253,7 @@ func runAgentLoop(ctx context.Context, rt *agentRuntime, messages []llms.Message
 
 				var result string
 				// 危险操作审批（阻塞等待）
-				if dangerousTools[name] {
+				if dangerousTools[name] && issuePreprocessToolAllowed(ctx, name) {
 					if !RequestApproval(ctx, name, args) {
 						log.Printf("[Tool] 用户拒绝了 %s", name)
 						toolData["rejected"] = true
@@ -354,7 +361,10 @@ func runAgentLoop(ctx context.Context, rt *agentRuntime, messages []llms.Message
 		}
 
 		// 3. 无 ToolCall / CALL → 最终回答
-		if text == "" {
+		if text == "" || (isIssuePreprocessSession(ctx) && strings.TrimSpace(text) == "") {
+			if isIssuePreprocessSession(ctx) {
+				return "", blocks, completionTokens, promptTokens, fmt.Errorf("模型未返回预处理报告")
+			}
 			if lastText != "" {
 				blocks = append(blocks, ChatMessage{Type: "message", Content: lastText})
 				return lastText, blocks, completionTokens, promptTokens, nil
@@ -376,6 +386,9 @@ func runAgentLoop(ctx context.Context, rt *agentRuntime, messages []llms.Message
 
 // spawnSubAgent 调用子 Agent
 func spawnSubAgent(ctx context.Context, def *AgentDef, task string, cwd string, providerKey string) (string, error) {
+	if isIssuePreprocessSession(ctx) {
+		return "", fmt.Errorf("Issue 预处理禁止调用子 Agent")
+	}
 	info := FindModel(providerKey)
 	if info == nil {
 		return "", fmt.Errorf("模型 %s 不存在", providerKey)

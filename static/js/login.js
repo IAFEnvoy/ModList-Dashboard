@@ -317,6 +317,10 @@ function updateLoginUI() {
   if (agentCard) agentCard.style.display = state.loggedIn ? '' : 'none';
   var driveCard = document.querySelector('.stat-card[data-page="drive"]');
   if (driveCard) driveCard.style.display = state.loggedIn ? '' : 'none';
+  var settingsView = document.getElementById('agentSettingsView');
+  if (settingsView) settingsView.style.display = state.loggedIn && state.currentAgentTab === 'settings' ? '' : 'none';
+  if (typeof updateIssuePreprocessAuth === 'function') updateIssuePreprocessAuth();
+  if (typeof updateBotBindingAuth === 'function') updateBotBindingAuth();
   updateLoginTxt();
 }
 function updateLoginTxt() {

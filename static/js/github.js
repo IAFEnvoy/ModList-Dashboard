@@ -1,5 +1,22 @@
 // github.js — GitHub Issues/PRs panel
+var issuePreprocessState = { enabled: false, reports: {} };
+var issuePreprocessPoll = null;
+var issuePreprocessSaving = false;
+var issuePreprocessAuthGeneration = 0;
+
 function setupGitHubTabs() {
+  document.getElementById('issuePreprocessCheck').addEventListener('change', saveIssuePreprocessSetting);
+  $('#githubList').addEventListener('click', function (e) {
+    var reportBtn = e.target.closest('.gh-preprocess-report');
+    var retryBtn = e.target.closest('.gh-preprocess-retry');
+    if (reportBtn) {
+      e.preventDefault();
+      openIssuePreprocessReport(reportBtn.dataset.sessionId);
+    } else if (retryBtn) {
+      e.preventDefault();
+      retryIssuePreprocess(retryBtn);
+    }
+  });
   $$('.gh-tab').forEach(tab => {
     tab.addEventListener('click', () => {
       $$('.gh-tab').forEach(t => t.classList.remove('active'));
@@ -56,8 +73,108 @@ function renderGitHubPanel() {
       (item.labels || []).map(function (l) { return '<span class="gh-label">' + esc(l) + '</span>'; }).join('') +
       '<span class="gh-user">' + esc(item.user || '') + '</span>' +
       (item.created_at ? '<span class="gh-date">' + item.created_at.slice(0, 10) + '</span>' : '') +
-      dispatchBtn +
+      (ghType === 'issue' && loggedIn ? issuePreprocessReportButton(rp, item.number) : '') + dispatchBtn +
       '</span>' +
       '</div>';
   }).join('');
+}
+
+function updateIssuePreprocessAuth() {
+  issuePreprocessAuthGeneration++;
+  clearInterval(issuePreprocessPoll);
+  issuePreprocessPoll = null;
+  issuePreprocessState = { enabled: false, reports: {} };
+  document.getElementById('issuePreprocessControls').style.display = state.loggedIn ? '' : 'none';
+  document.getElementById('issuePreprocessMessage').textContent = '';
+  document.getElementById('issuePreprocessCheck').checked = false;
+  document.getElementById('issuePreprocessCheck').disabled = true;
+  if (state.loggedIn) {
+    fetchIssuePreprocessState();
+    issuePreprocessPoll = setInterval(fetchIssuePreprocessState, 10000);
+  }
+  renderGitHubPanel();
+}
+
+async function fetchIssuePreprocessState() {
+  if (!state.loggedIn || issuePreprocessSaving) return;
+  var generation = issuePreprocessAuthGeneration;
+  try {
+    var response = await fetch('/api/admin/issue-preprocess', { headers: getAuthHeaders() });
+    var data = await response.json();
+    if (generation !== issuePreprocessAuthGeneration || issuePreprocessSaving) return;
+    if (!response.ok) throw new Error(data.error || t('issuePreprocessLoadFailed'));
+    issuePreprocessState = data;
+    document.getElementById('issuePreprocessCheck').checked = !!data.enabled;
+    document.getElementById('issuePreprocessCheck').disabled = false;
+    document.getElementById('issuePreprocessMessage').textContent = '';
+    renderGitHubPanel();
+  } catch (e) {
+    if (generation !== issuePreprocessAuthGeneration || issuePreprocessSaving) return;
+    document.getElementById('issuePreprocessCheck').disabled = true;
+    document.getElementById('issuePreprocessMessage').textContent = e.message;
+  }
+}
+
+async function saveIssuePreprocessSetting() {
+  var checkbox = document.getElementById('issuePreprocessCheck');
+  var generation = ++issuePreprocessAuthGeneration;
+  checkbox.disabled = true;
+  issuePreprocessSaving = true;
+  try {
+    var response = await fetch('/api/admin/issue-preprocess', {
+      method: 'PUT', headers: getAuthHeaders(), body: JSON.stringify({ enabled: checkbox.checked })
+    });
+    var data = await response.json();
+    if (generation !== issuePreprocessAuthGeneration) return;
+    if (!response.ok) throw new Error(data.error || t('issuePreprocessSaveFailed'));
+    issuePreprocessState = data;
+    document.getElementById('issuePreprocessMessage').textContent = t(data.enabled ? 'issuePreprocessEnabled' : 'issuePreprocessDisabled');
+    renderGitHubPanel();
+  } catch (e) {
+    if (generation === issuePreprocessAuthGeneration) document.getElementById('issuePreprocessMessage').textContent = e.message;
+  } finally {
+    issuePreprocessSaving = false;
+    if (generation === issuePreprocessAuthGeneration) {
+      checkbox.checked = !!issuePreprocessState.enabled;
+      checkbox.disabled = false;
+    }
+  }
+}
+
+function issuePreprocessReportButton(repo, number) {
+  var report = (issuePreprocessState.reports || {})[repo.toLowerCase() + '#' + number];
+  if (!report) return '';
+  var label = t('issuePreprocess_' + report.status);
+  var html = report.session_id
+    ? '<button type="button" class="gh-preprocess-report" data-session-id="' + esc(report.session_id) + '" title="' + esc(report.error || t('issuePreprocessViewReport')) + '">' + esc(label) + '</button>'
+    : '<span class="gh-preprocess-status" title="' + esc(report.error || '') + '">' + esc(label) + '</span>';
+  if (report.status === 'failed' && issuePreprocessState.enabled) {
+    html += '<button type="button" class="gh-preprocess-retry" data-repo="' + esc(repo) + '" data-number="' + number + '">' + esc(t('issuePreprocessRetry')) + '</button>';
+  }
+  return html;
+}
+
+async function retryIssuePreprocess(btn) {
+  btn.disabled = true;
+  try {
+    var response = await fetch('/api/admin/issue-preprocess', {
+      method: 'POST', headers: getAuthHeaders(), body: JSON.stringify({ repo: btn.dataset.repo, number: Number(btn.dataset.number) })
+    });
+    if (!response.ok) {
+      var data = await response.json();
+      throw new Error(data.error || t('issuePreprocessSaveFailed'));
+    }
+    await fetchIssuePreprocessState();
+  } catch (e) {
+    document.getElementById('issuePreprocessMessage').textContent = e.message;
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function openIssuePreprocessReport(sessionId) {
+  if (!state.loggedIn) return;
+  if (!await fetchAgentInfo()) return;
+  switchPage('agents');
+  openChatWindow(sessionId, FindAgentName('issue-preprocessor'));
 }

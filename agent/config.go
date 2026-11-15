@@ -86,6 +86,14 @@ func loadMCPs(path string) {
 func loadAgents(path string) {
 	var cfg AgentYAML
 	loadYAML(path, &cfg)
+	// Reserve the built-in read-only role even if a local config uses this ID.
+	filtered := cfg.Agents[:0]
+	for _, def := range cfg.Agents {
+		if def.ID != IssuePreprocessorID {
+			filtered = append(filtered, def)
+		}
+	}
+	cfg.Agents = append(filtered, issuePreprocessorDef())
 	for i := range cfg.Agents {
 		if cfg.Agents[i].MaxInstances <= 0 {
 			cfg.Agents[i].MaxInstances = 3

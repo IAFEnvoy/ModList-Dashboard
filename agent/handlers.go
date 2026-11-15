@@ -173,7 +173,7 @@ func HandleAgentChatStream(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func startAgent(session *ChatSession, userMsg string, rt *agentRuntime, pub *SSEBroadcaster) {
+func startAgent(session *ChatSession, userMsg string, rt *agentRuntime, pub *SSEBroadcaster) error {
 	sid := session.ID
 	log.Printf("[Agent] 开始 %s", sid)
 	ctx, cancel := context.WithCancel(context.Background())
@@ -254,6 +254,9 @@ func startAgent(session *ChatSession, userMsg string, rt *agentRuntime, pub *SSE
 		}
 		pub.Content(csid, chunk)
 	}, ctx)
+	if session.Agent == IssuePreprocessorID && ctx.Err() != nil {
+		err = ctx.Err()
+	}
 	if sa {
 		pub.StreamEnd(session, csid)
 	}
@@ -284,6 +287,7 @@ func startAgent(session *ChatSession, userMsg string, rt *agentRuntime, pub *SSE
 	} else {
 		pub.End(ee)
 	}
+	return err
 }
 
 func HandleAgentSessions(w http.ResponseWriter, r *http.Request) {

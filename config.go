@@ -35,6 +35,7 @@ func ensureConfigFiles() {
 		"agents.yml",
 		"ai.yml",
 		"mcps.yml",
+		"bots.yml",
 	}
 	for _, name := range required {
 		dst := filepath.Join("config", name)

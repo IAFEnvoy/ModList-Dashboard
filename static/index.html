@@ -106,12 +106,13 @@
       <!-- 代办事项容器 -->
       <div id="todosSection" class="todos-section" style="display:none;"></div>
 
-      <!-- Agent 面板容器（三标签：对话 / Agent列表 / MCP列表） -->
+      <!-- Agent 面板容器：对话 / Agent 列表 / MCP 服务器 / 设置 -->
       <div id="agentsSection" class="agents-section" style="display:none;">
         <div class="agent-tabs">
           <button class="agent-tab active" data-agent-view="chat" data-i18n="agentTabChat">对话</button>
           <button class="agent-tab" data-agent-view="agents" data-i18n="agentTabAgents">Agent 列表</button>
           <button class="agent-tab" data-agent-view="mcps" data-i18n="agentTabMCPs">MCP 服务器</button>
+          <button class="agent-tab" data-agent-view="settings" data-i18n="agentTabSettings">设置</button>
         </div>
 
         <!-- 对话视图（历史列表 + 聊天，二者互斥） -->
@@ -229,6 +230,40 @@
             </div>
             <div class="mcp-detail-content" id="mcpDetailContent" style="display:none;"></div>
           </div>
+        </div>
+
+        <!-- 设置视图 -->
+        <div id="agentSettingsView" class="agent-settings-view" style="display:none;">
+          <section id="issuePreprocessControls" class="agent-settings-card issue-preprocess-controls" style="display:none" aria-labelledby="issuePreprocessTitle">
+            <h3 id="issuePreprocessTitle" data-i18n="issuePreprocessToggle">自动预处理 Issue</h3>
+            <div class="agent-settings-row">
+              <p class="issue-preprocess-hint" data-i18n="issuePreprocessHint">TTL 刷新或手动清除 GitHub 缓存后，仅新增的 Open Issue 触发预处理。每次重启后首次成功拉取只更新基线；只读生成报告，关闭后当前任务会完成。</p>
+              <label class="gh-archive-toggle">
+                <input type="checkbox" id="issuePreprocessCheck" role="switch" aria-labelledby="issuePreprocessTitle" disabled>
+                <span class="toggle-track"><span class="toggle-thumb"></span></span>
+              </label>
+            </div>
+            <p id="issuePreprocessMessage" class="issue-preprocess-message" role="status" aria-live="polite"></p>
+          </section>
+          <section id="botBindingControls" class="agent-settings-card bot-binding-controls" style="display:none" aria-labelledby="botBindingTitle">
+            <h3 id="botBindingTitle" data-i18n="botBindingTitle">QQ 群通知绑定</h3>
+            <p class="bot-binding-hint" data-i18n="botBindingHint">生成一次性绑定码，在目标群中 @机器人 并发送 /bind 绑定码，即可接收新增 Issue 和预处理报告。</p>
+            <p class="bot-binding-hint" data-i18n="botBindingPermission">绑定后，仍需群主在机器人的群消息设置中允许主动推送。</p>
+            <div class="bot-binding-actions">
+              <button type="button" id="botBindingGenerate" data-i18n="botBindingGenerate" disabled>生成绑定码</button>
+              <span id="botBindingAvailability" class="bot-binding-hint"></span>
+            </div>
+            <div id="botBindingCodeBox" hidden>
+              <label for="botBindingCommand" data-i18n="botBindingCommand">在群里发送（必要时 @机器人）</label>
+              <div class="bot-binding-actions">
+                <input id="botBindingCommand" type="text" readonly autocomplete="off" spellcheck="false">
+                <button type="button" id="botBindingCopy" data-i18n="botBindingCopy">复制指令</button>
+              </div>
+              <p id="botBindingExpiry" class="bot-binding-hint"></p>
+            </div>
+            <p id="botBindingMessage" class="bot-binding-message" role="status" aria-live="polite"></p>
+            <ul id="botBindingList" class="bot-binding-list"></ul>
+          </section>
         </div>
       </div>
 
@@ -565,6 +600,7 @@
   <script src="js/LLMStream2.js"></script>
   <script src="js/detail.js"></script>
   <script src="js/github.js"></script>
+  <script src="js/bot.js"></script>
   <script src="js/todolist.js"></script>
   <script src="js/marked.min.js"></script>
   <script src="js/purify.min.js"></script>

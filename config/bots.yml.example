@@ -1,0 +1,27 @@
+# 可选 Bot 通知模块。修改后重启服务生效；默认关闭，不连接任何平台。
+enabled: false
+notify_new_issues: true
+notify_reports: true
+
+# 可选：附在报告后的看板地址。会话仍需登录；不会生成公开分享链接。
+dashboard_url: ""
+
+# 各平台负责鉴权、收发适配；绑定码、通知识别、队列和重试由通用 bot 模块负责。
+providers:
+  qq:
+    enabled: false
+    app_id: "${QQBOT_APP_ID}"
+    app_secret: "${QQBOT_APP_SECRET}"
+    sandbox: false
+
+# 可留空：登录网站 → Agent → 设置 → QQ 群通知绑定，生成一次性码。
+# QQ 通过 WebSocket 长连接接收事件，无需配置公网回调地址。
+# 在 QQ 开放平台启用群聊能力；连接自动订阅 GROUP_AT_MESSAGE_CREATE。
+# 群里 @机器人 /bind 绑定码。
+# 群主还需在机器人的群消息设置中允许主动推送。
+# 下方也可手动指定固定目标（网页解绑不会移除配置文件中的目标）。
+# group/c2c 使用开放平台 openid，不是 QQ 群号/QQ 号；不要提交真实 ID/凭据。
+targets: []
+#  - provider: qq
+#    type: channel # channel / group / c2c
+#    id: "频道子频道 ID"

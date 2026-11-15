@@ -303,6 +303,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   setupRefreshButtons();
   setupDetailClose();
   setupGitHubTabs();
+  setupBotBindings();
   setupScatterToggle();
   setupStatsBar();
   setupSidebarToggle();

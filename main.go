@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net/http"
@@ -82,6 +83,8 @@ func main() {
 	mux.HandleFunc("/api/todos/counts", corsMiddleware(handleTodoCounts))
 	mux.HandleFunc("/api/todos", corsMiddleware(handleTodos))
 	mux.HandleFunc("/api/admin/flush-cache", corsMiddleware(withAuth(handleFlushCache)))
+	mux.HandleFunc("/api/admin/issue-preprocess", corsMiddleware(withAuth(handleIssuePreprocess)))
+	mux.HandleFunc("/api/admin/bot-bindings", corsMiddleware(withAuth(handleBotBindings)))
 	mux.HandleFunc("/api/todos/", corsMiddleware(handleTodos))
 	// Agent API — 需要登录
 	mux.HandleFunc("/api/agent/info", corsMiddleware(withAuth(agent.HandleAgentInfo)))
@@ -132,8 +135,35 @@ func main() {
 		go startCodacyWorker()
 	}
 
+	botCtx, stopBots := context.WithCancel(context.Background())
+	defer stopBots()
+	var botErr error
+	botService, botErr = newBotService("config/bots.yml", filepath.Join("data", "bot-notifications.json"))
+	if botErr != nil {
+		log.Printf("[Bot] 初始化失败，通知模块已停用: %v", botErr)
+	} else if botService != nil {
+		seedBotIssues()
+		go botService.Run(botCtx)
+		if qqBotReceiver != nil {
+			go func() {
+				if err := qqBotReceiver.Run(botCtx); err != nil {
+					log.Printf("[QQBot] WebSocket 接入已停止，请检查平台权限和配置: %v", err)
+				}
+			}()
+		}
+		log.Printf("[Bot] 通知模块已启用")
+	}
+
 	// 缓存未命中时不阻塞请求（返回零值 + 后台异步加载）
 	// 预热仅加速首次填充，不与请求耦合
+	var preprocessErr error
+	issuePreprocessor, preprocessErr = newIssuePreprocessService(filepath.Join("data", "issue-preprocess.json"))
+	if preprocessErr != nil {
+		log.Printf("[Issue] 初始化自动预处理失败: %v", preprocessErr)
+	} else {
+		go issuePreprocessor.run()
+	}
+	go runGitHubTTLRefresh(botCtx)
 	go prewarmCache()
 
 	log.Printf("[Start] 模组看板启动于 http://localhost%s", addr)
