@@ -15,12 +15,14 @@ import (
 )
 
 type delivery struct {
-	ID          string    `json:"id"`
-	Target      Target    `json:"target"`
-	Parts       []string  `json:"parts"`
-	NextPart    int       `json:"next_part"`
-	Attempts    int       `json:"attempts"`
-	NextAttempt time.Time `json:"next_attempt"`
+	ID            string    `json:"id"`
+	Target        Target    `json:"target"`
+	Parts         []string  `json:"parts"`
+	NextPart      int       `json:"next_part"`
+	Attempts      int       `json:"attempts"`
+	NextAttempt   time.Time `json:"next_attempt"`
+	Report        *Report   `json:"report,omitempty"`
+	CompactReport bool      `json:"compact_report,omitempty"`
 }
 
 type state struct {
@@ -32,17 +34,19 @@ type state struct {
 }
 
 type Service struct {
-	mu            sync.Mutex
-	cfg           Config
-	path          string
-	senders       map[string]Sender
-	state         state
-	observedRepos map[string]bool // Fresh upstream snapshots in this process, not cached seeds.
-	wake          chan struct{}
+	mu                sync.Mutex
+	cfg               Config
+	path              string
+	senders           map[string]Sender
+	state             state
+	observedRepos     map[string]bool // Fresh upstream snapshots in this process, not cached seeds.
+	wake              chan struct{}
+	summarizeReport   ReportSummarizer
+	createReportShare ReportShareCreator
 }
 
 // New does not access the network. A disabled service does not create state.
-func New(cfg Config, path string, senders map[string]Sender) (*Service, error) {
+func New(cfg Config, path string, senders map[string]Sender, options ...Option) (*Service, error) {
 	if !cfg.Enabled {
 		return nil, nil
 	}
@@ -56,6 +60,9 @@ func New(cfg Config, path string, senders map[string]Sender) (*Service, error) {
 		}
 	}
 	s := &Service{cfg: cfg, path: path, senders: make(map[string]Sender), observedRepos: make(map[string]bool), wake: make(chan struct{}, 1)}
+	for _, option := range options {
+		option(s)
+	}
 	for name, sender := range senders {
 		s.senders[name] = sender
 	}
@@ -99,7 +106,12 @@ func New(cfg Config, path string, senders map[string]Sender) (*Service, error) {
 	kept := s.state.Pending[:0]
 	for _, item := range s.state.Pending {
 		eventEnabled := (cfg.NotifyNewIssues && strings.HasPrefix(item.ID, "issue:")) || (cfg.NotifyReports && strings.HasPrefix(item.ID, "report:"))
-		if eventEnabled && seen[item.Target] && item.NextPart >= 0 && item.NextPart < len(item.Parts) {
+		valid := item.NextPart >= 0 && item.NextPart < len(item.Parts) || item.Report != nil && item.NextPart == 0
+		if eventEnabled && seen[item.Target] && valid {
+			if strings.HasPrefix(item.ID, "report:") && !item.CompactReport && item.Report == nil {
+				item.Report = legacyReport(item)
+				item.Parts, item.NextPart = nil, 0
+			}
 			kept = append(kept, item)
 		}
 	}
@@ -186,11 +198,9 @@ func (s *Service) PublishReport(report Report) error {
 		return nil
 	}
 	pendingCount := len(s.state.Pending)
-	text := fmt.Sprintf("Issue 预处理报告 · %s\n%s #%d\n会话: %s\n\n%s", report.Project, report.Repo, report.Number, report.SessionID, report.Content)
-	if s.cfg.DashboardURL != "" {
-		text += "\n\n报告会话历史（需登录）: " + strings.TrimRight(s.cfg.DashboardURL, "/") + "/#agents-chat"
+	for _, target := range s.targetsLocked() {
+		s.state.Pending = append(s.state.Pending, delivery{ID: "report:" + report.SessionID, Target: target, Report: &report})
 	}
-	s.enqueueLocked("report:"+report.SessionID, text)
 	s.state.Reports[report.SessionID] = true
 	if err := s.saveLocked(); err != nil {
 		delete(s.state.Reports, report.SessionID)
@@ -275,6 +285,9 @@ func (s *Service) sendNext(ctx context.Context, now time.Time) time.Duration {
 	}
 	item := s.state.Pending[index]
 	s.mu.Unlock()
+	if item.Report != nil {
+		return s.summarizeNextReport(ctx, item)
+	}
 	requestCtx, cancel := context.WithTimeout(ctx, 20*time.Second)
 	err := s.senders[item.Target.Provider].Send(requestCtx, item.Target, item.Parts[item.NextPart])
 	cancel()
@@ -311,6 +324,56 @@ func (s *Service) sendNext(ctx context.Context, now time.Time) time.Duration {
 	if err := s.saveLocked(); err != nil {
 		s.state.Pending = previous
 		log.Printf("[Bot] 无法保存通知进度: %v", err)
+		return 10 * time.Second
+	}
+	return time.Second
+}
+
+func (s *Service) summarizeNextReport(ctx context.Context, item delivery) time.Duration {
+	requestCtx, cancel := context.WithTimeout(ctx, 60*time.Second)
+	summary := ""
+	var err error
+	if s.summarizeReport != nil {
+		summary, err = s.summarizeReport(requestCtx, item.Report.Content)
+	}
+	if err == nil {
+		err = requestCtx.Err()
+	}
+	cancel()
+	if ctx.Err() != nil {
+		return time.Second
+	}
+	if err != nil {
+		log.Printf("[Bot] 报告摘要生成失败 (%s)，将发送简短提示: %v", item.ID, err)
+	}
+	if err != nil || strings.TrimSpace(summary) == "" {
+		summary = reportSummaryFallback
+	}
+	shareID := ""
+	if s.cfg.DashboardURL != "" && s.createReportShare != nil {
+		var shareErr error
+		shareID, shareErr = s.createReportShare(item.Report.SessionID, item.Report.Content)
+		if shareErr != nil {
+			shareID = ""
+			log.Printf("[Bot] 无法创建报告分享链接 (%s): %v", item.ID, shareErr)
+		}
+	}
+	text := s.reportMessage(*item.Report, summary, shareID)
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	previous := append([]delivery(nil), s.state.Pending...)
+	// Apply one generated summary to all original recipients, including those
+	// blocked by a send retry. Unbinding during generation cannot add targets.
+	for i, pending := range s.state.Pending {
+		if pending.ID == item.ID && pending.Report != nil {
+			pending.Parts, pending.NextPart = []string{text}, 0
+			pending.Report, pending.CompactReport = nil, true
+			s.state.Pending[i] = pending
+		}
+	}
+	if err := s.saveLocked(); err != nil {
+		s.state.Pending = previous
+		log.Printf("[Bot] 无法保存报告摘要 (%s): %v", item.ID, err)
 		return 10 * time.Second
 	}
 	return time.Second

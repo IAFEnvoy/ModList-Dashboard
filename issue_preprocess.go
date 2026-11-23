@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -269,6 +270,8 @@ func (s *issuePreprocessService) processIssue(meta ModMeta, item GitHubItem) {
 		report.Status, report.Error = "failed", err.Error()
 		if errors.Is(err, errIssueNoLongerOpen) {
 			report.Status = "skipped"
+		} else {
+			log.Printf("[Issue] 预处理失败 %s: %v", key, err)
 		}
 	}
 	s.mu.Lock()
@@ -334,14 +337,11 @@ func analyzeIssue(meta ModMeta, item GitHubItem, onSession func(string) error) (
 	if detail.State != "open" {
 		return "", errIssueNoLongerOpen
 	}
-	// Unlike manual dispatch, automatic preprocessing only uses existing sources.
-	var projectPath string
-	for _, root := range ProjectPaths {
-		candidate := filepath.Join(root, parts[1])
-		if info, err := os.Stat(candidate); err == nil && info.IsDir() {
-			projectPath, _ = filepath.Abs(candidate)
-			break
-		}
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
+	projectPath, err := agent.PrepareIssueProject(ctx, agent.ProjectMeta{Name: meta.Name, RepoGH: meta.IDs.GH}, ProjectPaths, authConfig.gitHubToken(parts[0]))
+	if err != nil {
+		return "", fmt.Errorf("预处理准备源码失败：%w", err)
 	}
 	return agent.RunIssuePreprocess(agent.IssuePreprocessInput{
 		Project: meta.Name, ProjectPath: projectPath,

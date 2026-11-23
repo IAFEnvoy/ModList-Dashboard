@@ -214,6 +214,7 @@ func TestUnbindDuringSendDoesNotCorruptAnotherTargetsQueue(t *testing.T) {
 	if err := s.PublishReport(Report{SessionID: "shared", Content: "report"}); err != nil {
 		t.Fatal(err)
 	}
+	s.sendNext(context.Background(), time.Now()) // Prepare the compact report.
 	done := make(chan struct{})
 	go func() { defer close(done); s.sendNext(context.Background(), time.Now()) }()
 	<-sender.started

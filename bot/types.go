@@ -31,9 +31,9 @@ type Issue struct {
 }
 
 type Report struct {
-	Repo      string
-	Project   string
-	Number    int
-	SessionID string
-	Content   string
+	Repo      string `json:"repo"`
+	Project   string `json:"project"`
+	Number    int    `json:"number"`
+	SessionID string `json:"session_id"`
+	Content   string `json:"content"`
 }

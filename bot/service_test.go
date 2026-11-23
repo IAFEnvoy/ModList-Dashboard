@@ -105,46 +105,57 @@ func TestIssueBaselineDeltaAndRestartDoNotRepeatOldIssues(t *testing.T) {
 	}
 }
 
-func TestReportRetryRetainsChunkProgressAndDoesNotBlockOtherTargets(t *testing.T) {
+func TestReportSummaryIsGeneratedOnceAndRetryDoesNotBlockOtherTargets(t *testing.T) {
 	sender := &testSender{}
 	cfg := testConfig()
 	cfg.Targets = append(cfg.Targets, Target{Provider: "fake", Type: "room", ID: "two"})
 	s := newTestService(t, cfg, sender)
+	summaryCalls := 0
+	s.summarizeReport = func(_ context.Context, content string) (string, error) {
+		summaryCalls++
+		if !strings.Contains(content, "完整报告") {
+			t.Fatal("summary lost source report")
+		}
+		return "已确认问题存在，建议修复输入校验。", nil
+	}
 	report := Report{Repo: "owner/repo", Project: "项目", Number: 11, SessionID: "session", Content: strings.Repeat("完整报告🙂", 250)}
 	if err := s.PublishReport(report); err != nil {
 		t.Fatal(err)
 	}
-	parts := len(s.state.Pending[0].Parts)
-	if parts < 2 {
-		t.Fatal("long report was not split")
+	if summaryCalls != 0 || s.state.Pending[0].Report == nil {
+		t.Fatal("producer performed synchronous model work or lost draft")
 	}
-	// One part sent before failure. The second recipient must still work.
+	// Preparing one summary updates every recipient before any message is sent.
 	s.sendNext(context.Background(), time.Now())
+	if summaryCalls != 1 || len(s.state.Pending[0].Parts) != 1 || len(s.state.Pending[1].Parts) != 1 {
+		t.Fatal("report did not become one shared summary")
+	}
 	sender.fail = "one"
 	s.sendNext(context.Background(), time.Now())
 	s.sendNext(context.Background(), time.Now())
-	if len(sender.sent) != 2 || sender.sent[1].target.ID != "two" {
+	if len(sender.sent) != 1 || sender.sent[0].target.ID != "two" {
 		t.Fatal("one failed target blocked other recipients")
 	}
-	restored, err := New(cfg, s.path, map[string]Sender{"fake": sender})
+	restored, err := New(cfg, s.path, map[string]Sender{"fake": sender}, WithReportSummarizer(func(context.Context, string) (string, error) {
+		t.Error("restart regenerated stored summary")
+		return "", nil
+	}))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if restored.state.Pending[0].NextPart != 1 {
-		t.Fatal("restart lost partial report progress")
+	if len(restored.state.Pending) != 1 || !restored.state.Pending[0].CompactReport || restored.state.Pending[0].Report != nil {
+		t.Fatal("restart lost prepared summary or resent completed recipient")
 	}
 	if err := restored.PublishReport(report); err != nil {
 		t.Fatal(err)
 	}
-	if len(restored.state.Pending) != 2 {
+	if len(restored.state.Pending) != 1 {
 		t.Fatal("duplicate report was requeued")
 	}
 	sender.fail = ""
-	for range parts * 2 {
-		restored.sendNext(context.Background(), time.Now().Add(time.Hour))
-	}
-	if len(restored.state.Pending) != 0 || len(sender.sent) != parts*2 {
-		t.Fatalf("report retry repeated or lost chunks: pending=%d sent=%d parts=%d", len(restored.state.Pending), len(sender.sent), parts)
+	restored.sendNext(context.Background(), time.Now().Add(time.Hour))
+	if len(restored.state.Pending) != 0 || len(sender.sent) != 2 || sender.sent[1].target.ID != "one" || summaryCalls != 1 {
+		t.Fatalf("report retry repeated or lost summaries: pending=%d sent=%d calls=%d", len(restored.state.Pending), len(sender.sent), summaryCalls)
 	}
 }
 

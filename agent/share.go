@@ -13,6 +13,30 @@ import (
 	"strings"
 )
 
+// CreateIssueReportShare reuses normal share pages, publishing only the final
+// report block. Attachments, tool output and intermediate messages stay private.
+func CreateIssueReportShare(sessionID, report string) (string, error) {
+	index := -1
+	sessionMu.Lock()
+	for _, session := range AgentSessions {
+		if session.ID != sessionID || session.Agent != IssuePreprocessorID || session.Running || session.LimitExceeded {
+			continue
+		}
+		for i := len(session.Messages) - 1; i >= 0; i-- {
+			if text, ok := session.Messages[i].Content.(string); ok && session.Messages[i].Type == "message" && strings.TrimSpace(text) != "" && text == report {
+				index = i
+				break
+			}
+		}
+		break
+	}
+	sessionMu.Unlock()
+	if index < 0 {
+		return "", fmt.Errorf("未找到已完成的预处理报告")
+	}
+	return dbGetOrCreateReportShare(sessionID, strconv.Itoa(index))
+}
+
 // HandleAgentShare 分享创建 API（需要登录）。
 // POST /api/agent/share
 func HandleAgentShare(w http.ResponseWriter, r *http.Request) {

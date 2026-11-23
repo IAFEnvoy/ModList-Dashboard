@@ -71,7 +71,13 @@ func TestBotHooksNotifyNewIssuesAndCompletedReportsIndependentlyOfPreprocessSwit
 	sender := &integrationBotSender{sent: make(chan string, 4)}
 	var err error
 	botService, err = bot.New(bot.Config{Enabled: true, NotifyNewIssues: true, NotifyReports: true,
-		Targets: []bot.Target{{Provider: "test", ID: "test-target"}}}, filepath.Join(t.TempDir(), "state.json"), map[string]bot.Sender{"test": sender})
+		Targets: []bot.Target{{Provider: "test", ID: "test-target"}}}, filepath.Join(t.TempDir(), "state.json"), map[string]bot.Sender{"test": sender},
+		bot.WithReportSummarizer(func(_ context.Context, report string) (string, error) {
+			if report != "confirmed report with solution" {
+				t.Errorf("summary received non-report content: %q", report)
+			}
+			return "简短结论与建议", nil
+		}))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -120,13 +126,13 @@ func TestBotHooksNotifyNewIssuesAndCompletedReportsIndependentlyOfPreprocessSwit
 	done := make(chan struct{})
 	go func() { defer close(done); botService.Run(ctx) }()
 	t.Cleanup(func() { cancel(); <-done })
-	for _, expected := range []string{"new issue", "confirmed report with solution"} {
+	for _, expected := range []string{"new issue", "简短结论与建议"} {
 		select {
 		case content := <-sender.sent:
 			if !strings.Contains(content, expected) || strings.Contains(content, "PRIVATE TOOL OUTPUT") {
 				t.Fatalf("unexpected notification: %s", content)
 			}
-		case <-time.After(3 * time.Second):
+		case <-time.After(4 * time.Second):
 			t.Fatalf("missing notification: %s", expected)
 		}
 	}

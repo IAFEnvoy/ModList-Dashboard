@@ -31,15 +31,18 @@ func RunAgent(rt *agentRuntime, session *ChatSession, userMsg string, cwd string
 
 	// 系统提示词（含子 Agent 调用说明 + 环境信息）
 	sysPrompt := buildAgentSystemPrompt(def)
-	if session.Agent == IssuePreprocessorID {
+	preprocessing := session.Agent == IssuePreprocessorID
+	if preprocessing {
 		sysPrompt = expandPromptForSession(sysPrompt, session)
 	}
-	sysPrompt += "\n\n## 环境信息\n你运行在 Windows 系统上。shell_exec 使用 `cmd /c` 执行命令，请使用 Windows 命令（如 `type` 而非 `cat`，`dir` 而非 `ls`）。"
-	sysPrompt += "\n\n## 🔧 工具使用优先级（必须遵守）\n"
-	sysPrompt += "1. **内置只读工具优先**：read_file / read_files / list_files / file_search / grep_search 能满足需求时，不要用其他工具。\n"
-	sysPrompt += "2. **外部 MCP**：内置工具无法满足时（如需要 GitHub API、数据库查询），优先使用外部 MCP 工具（名称含 `__`）。\n"
-	sysPrompt += "3. **Web Fetch**：仅当前两步都无法获取所需信息时，才使用 fetch_webpage 或 download_file 抓取网页。**禁止用 fetch_webpage 去搜 GitHub Issue！** Issue 内容已在附件中。\n"
-	sysPrompt += "4. **Shell 最后手段**：仅在前三步都无法完成时，才使用 shell_exec。**禁止用 shell_exec 代替 grep_search、file_search 等内置搜索工具！** `findstr` / `grep` 类操作一律用 grep_search。"
+	if !preprocessing {
+		sysPrompt += "\n\n## 环境信息\n你运行在 Windows 系统上。shell_exec 使用 `cmd /c` 执行命令，请使用 Windows 命令（如 `type` 而非 `cat`，`dir` 而非 `ls`）。"
+		sysPrompt += "\n\n## 🔧 工具使用优先级（必须遵守）\n"
+		sysPrompt += "1. **内置只读工具优先**：read_file / read_files / list_files / file_search / grep_search 能满足需求时，不要用其他工具。\n"
+		sysPrompt += "2. **外部 MCP**：内置工具无法满足时（如需要 GitHub API、数据库查询），优先使用外部 MCP 工具（名称含 `__`）。\n"
+		sysPrompt += "3. **Web Fetch**：仅当前两步都无法获取所需信息时，才使用 fetch_webpage 或 download_file 抓取网页。**禁止用 fetch_webpage 去搜 GitHub Issue！** Issue 内容已在附件中。\n"
+		sysPrompt += "4. **Shell 最后手段**：仅在前三步都无法完成时，才使用 shell_exec。**禁止用 shell_exec 代替 grep_search、file_search 等内置搜索工具！** `findstr` / `grep` 类操作一律用 grep_search。"
+	}
 	if cwd != "" {
 		sysPrompt += fmt.Sprintf("\n工作目录: `%s`\n所有文件相对路径基于此目录。", cwd)
 	}
@@ -173,6 +176,7 @@ func runAgentLoop(ctx context.Context, rt *agentRuntime, messages []llms.Message
 	var readCount = make(map[string]int)
 	var completionTokens int // 累计 completion tokens
 	var promptTokens int     // 累计 prompt tokens（最后一轮）
+	preprocessing := isIssuePreprocessSession(ctx)
 
 	for round := 0; round < maxRounds; round++ {
 		select {
@@ -190,7 +194,20 @@ func runAgentLoop(ctx context.Context, rt *agentRuntime, messages []llms.Message
 		log.Printf("[LLM] 第%d轮调用 %s (消息数=%d)...", round+1, rt.info.Model, len(messages))
 
 		opts := rt.chatOptionsStream(temp, onChunk)
-		resp, err := rt.llm.GenerateContent(ctx, messages, opts...)
+		callMessages := messages
+		finalReportRound := preprocessing && round == maxRounds-1
+		if preprocessing {
+			// Also reserve the remaining time for a report near the run deadline.
+			if deadline, ok := ctx.Deadline(); ok && time.Until(deadline) < time.Minute {
+				finalReportRound = true
+			}
+			callMessages = append(append([]llms.MessageContent(nil), messages...),
+				llms.TextParts(llms.ChatMessageTypeSystem, issuePreprocessRoundPrompt(round, maxRounds, finalReportRound)))
+			if finalReportRound {
+				opts = append(opts, llms.WithTools(nil), llms.WithToolChoice("none"))
+			}
+		}
+		resp, err := rt.llm.GenerateContent(ctx, callMessages, opts...)
 		if err != nil {
 			log.Printf("[LLM] 第%d轮调用失败: %v", round+1, err)
 			if lastText != "" {
@@ -218,6 +235,9 @@ func runAgentLoop(ctx context.Context, rt *agentRuntime, messages []llms.Message
 
 		text := resp.Choices[0].Content
 		log.Printf("[LLM] 第%d轮完成 (choices=%d, toolCalls=%d)", round+1, len(resp.Choices), len(resp.Choices[0].ToolCalls))
+		if finalReportRound && len(resp.Choices[0].ToolCalls) > 0 {
+			return "", blocks, completionTokens, promptTokens, fmt.Errorf("%w：模型在最终报告阶段仍请求工具，尚未生成完整报告，可查看对话后继续", errMaxRoundsExceeded)
+		}
 
 		// 1. 检查原生 ToolCalls（由 WithTools 触发，已从流式输出中抑制）
 		if len(resp.Choices[0].ToolCalls) > 0 {
@@ -327,6 +347,9 @@ func runAgentLoop(ctx context.Context, rt *agentRuntime, messages []llms.Message
 		if text != "" {
 			subName, subTask := parseSubAgentCall(text)
 			if subName != "" {
+				if finalReportRound {
+					return "", blocks, completionTokens, promptTokens, fmt.Errorf("%w：模型在最终报告阶段仍请求子 Agent，尚未生成完整报告，可查看对话后继续", errMaxRoundsExceeded)
+				}
 				subDef := FindAgentDef(subName)
 				if subDef == nil {
 					messages = append(messages, llms.TextParts(llms.ChatMessageTypeAI, text))
@@ -378,6 +401,9 @@ func runAgentLoop(ctx context.Context, rt *agentRuntime, messages []llms.Message
 	if lastText != "" {
 		blocks = append(blocks, ChatMessage{Type: "message", Content: lastText})
 		return lastText, blocks, completionTokens, promptTokens, nil
+	}
+	if preprocessing {
+		return "", blocks, completionTokens, promptTokens, fmt.Errorf("%w：预处理未在 %d 轮内生成最终报告，可查看对话后继续", errMaxRoundsExceeded, maxRounds)
 	}
 	return "(达到最大轮次，AI 推理已暂停，可点击继续按钮恢复)", blocks, completionTokens, promptTokens, errMaxRoundsExceeded
 }

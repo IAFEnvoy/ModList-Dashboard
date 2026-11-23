@@ -62,7 +62,9 @@ func newBotService(configPath, statePath string) (*bot.Service, error) {
 		senders["qq"] = sender
 		qqSender = sender
 	}
-	service, err := bot.New(settings.Config, statePath, senders)
+	service, err := bot.New(settings.Config, statePath, senders,
+		bot.WithReportSummarizer(agent.SummarizeIssueReport),
+		bot.WithReportShareCreator(agent.CreateIssueReportShare))
 	if err != nil {
 		return nil, err
 	}

@@ -408,6 +408,26 @@ func dbClearTodos(sessionID string) {
 
 // ========== Share CRUD ==========
 
+// Reuse one share for an identical report block across queue retries/restarts.
+func dbGetOrCreateReportShare(sessionID, blockRange string) (string, error) {
+	dbMu.Lock()
+	defer dbMu.Unlock()
+	if db == nil {
+		return "", fmt.Errorf("会话数据库不可用")
+	}
+	var id string
+	err := db.QueryRow("SELECT id FROM shares WHERE session_id=? AND block_ranges=? LIMIT 1", sessionID, blockRange).Scan(&id)
+	if err == nil {
+		return id, nil
+	}
+	if err != sql.ErrNoRows {
+		return "", err
+	}
+	id = genShareID()
+	_, err = db.Exec("INSERT INTO shares(id,session_id,block_ranges,created_at) VALUES(?,?,?,?)", id, sessionID, blockRange, time.Now().UTC().Format(time.RFC3339))
+	return id, err
+}
+
 // dbCreateShare 创建分享记录。
 func dbCreateShare(id, sessionID, blockRanges string) error {
 	dbMu.Lock()

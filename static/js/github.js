@@ -145,9 +145,13 @@ function issuePreprocessReportButton(repo, number) {
   var report = (issuePreprocessState.reports || {})[repo.toLowerCase() + '#' + number];
   if (!report) return '';
   var label = t('issuePreprocess_' + report.status);
-  var html = report.session_id
-    ? '<button type="button" class="gh-preprocess-report" data-session-id="' + esc(report.session_id) + '" title="' + esc(report.error || t('issuePreprocessViewReport')) + '">' + esc(label) + '</button>'
-    : '<span class="gh-preprocess-status" title="' + esc(report.error || '') + '">' + esc(label) + '</span>';
+  var error = report.error === 'max rounds exceeded' ? t('issuePreprocessRoundsExceeded') : report.error;
+  var html = report.session_id && report.status === 'completed'
+    ? '<button type="button" class="gh-preprocess-report" data-session-id="' + esc(report.session_id) + '" title="' + esc(error || t('issuePreprocessViewReport')) + '">' + esc(label) + '</button>'
+    : '<span class="gh-preprocess-status" title="' + esc(error || '') + '">' + esc(label) + '</span>';
+  if (report.session_id && report.status !== 'completed') {
+    html += '<button type="button" class="gh-preprocess-report" data-session-id="' + esc(report.session_id) + '" title="' + esc(t('issuePreprocessViewReport')) + '">' + esc(t('issuePreprocessViewConversation')) + '</button>';
+  }
   if (report.status === 'failed' && issuePreprocessState.enabled) {
     html += '<button type="button" class="gh-preprocess-retry" data-repo="' + esc(repo) + '" data-number="' + number + '">' + esc(t('issuePreprocessRetry')) + '</button>';
   }

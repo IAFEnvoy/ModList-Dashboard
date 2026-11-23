@@ -69,10 +69,14 @@ func TestIssuePreprocessRejectsWritesShellMCPAndDelegation(t *testing.T) {
 }
 
 type issuePreprocessTestModel struct {
-	generate func(context.Context, []llms.MessageContent) (*llms.ContentResponse, error)
+	generate            func(context.Context, []llms.MessageContent) (*llms.ContentResponse, error)
+	generateWithOptions func(context.Context, []llms.MessageContent, ...llms.CallOption) (*llms.ContentResponse, error)
 }
 
-func (m issuePreprocessTestModel) GenerateContent(ctx context.Context, messages []llms.MessageContent, _ ...llms.CallOption) (*llms.ContentResponse, error) {
+func (m issuePreprocessTestModel) GenerateContent(ctx context.Context, messages []llms.MessageContent, opts ...llms.CallOption) (*llms.ContentResponse, error) {
+	if m.generateWithOptions != nil {
+		return m.generateWithOptions(ctx, messages, opts...)
+	}
 	return m.generate(ctx, messages)
 }
 

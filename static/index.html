@@ -237,7 +237,7 @@
           <section id="issuePreprocessControls" class="agent-settings-card issue-preprocess-controls" style="display:none" aria-labelledby="issuePreprocessTitle">
             <h3 id="issuePreprocessTitle" data-i18n="issuePreprocessToggle">自动预处理 Issue</h3>
             <div class="agent-settings-row">
-              <p class="issue-preprocess-hint" data-i18n="issuePreprocessHint">TTL 刷新或手动清除 GitHub 缓存后，仅新增的 Open Issue 触发预处理。每次重启后首次成功拉取只更新基线；只读生成报告，关闭后当前任务会完成。</p>
+              <p class="issue-preprocess-hint" data-i18n="issuePreprocessHint">TTL 或手动刷新只处理新增 Open Issue；重启后首次拉取仅更新基线。分析前自动 clone 或更新当前分支，并清除本地修改、未跟踪及忽略文件；分析只生成报告，关闭后当前任务会完成。</p>
               <label class="gh-archive-toggle">
                 <input type="checkbox" id="issuePreprocessCheck" role="switch" aria-labelledby="issuePreprocessTitle" disabled>
                 <span class="toggle-track"><span class="toggle-thumb"></span></span>

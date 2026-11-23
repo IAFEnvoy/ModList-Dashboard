@@ -27,6 +27,52 @@ func testIssuePreprocessor(t *testing.T) *issuePreprocessService {
 	return s
 }
 
+func TestSourcePreparationFailureIsPersistedAndReportedWithoutStartingAgent(t *testing.T) {
+	previousPaths, previousTransport, previousAuth := ProjectPaths, http.DefaultTransport, authConfig
+	ProjectPaths = []string{t.TempDir()}
+	authConfig.GitHub.Tokens = map[string]string{"owner": "test-token"}
+	t.Cleanup(func() {
+		ProjectPaths, http.DefaultTransport, authConfig = previousPaths, previousTransport, previousAuth
+	})
+	// A same-named non-Git directory must produce a visible failure rather
+	// than silently analyzing its stale files or resetting its parent repo.
+	project := filepath.Join(ProjectPaths[0], "repo")
+	if err := os.Mkdir(project, 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(project, "keep.txt"), []byte("keep"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	http.DefaultTransport = issueRefreshTestTransport(func(r *http.Request) (*http.Response, error) {
+		return &http.Response{StatusCode: http.StatusOK, Header: make(http.Header), Body: io.NopCloser(strings.NewReader(`{"number":1,"state":"open","title":"Example","body":"Investigate"}`)), Request: r}, nil
+	})
+	s := testIssuePreprocessor(t)
+	if err := s.setEnabled(true); err != nil {
+		t.Fatal(err)
+	}
+	meta := ModMeta{Name: "Example"}
+	meta.IDs.GH = "owner/repo"
+	if err := s.observeIssues(meta, nil); err != nil {
+		t.Fatal(err)
+	}
+	item := GitHubItem{Number: 1, State: "open"}
+	if err := s.observeIssues(meta, []GitHubItem{item}); err != nil {
+		t.Fatal(err)
+	}
+	s.processIssue(meta, item)
+	restored, err := newIssuePreprocessService(s.path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	report := restored.snapshot().Reports["owner/repo#1"]
+	if report.Status != "failed" || report.SessionID != "" || !strings.Contains(report.Error, "准备源码失败") || !strings.Contains(report.Error, "不是独立的 Git 仓库") {
+		t.Fatalf("source error not persisted for UI: %+v", report)
+	}
+	if _, err := os.Stat(filepath.Join(project, "keep.txt")); err != nil {
+		t.Fatal("non-repository data was deleted")
+	}
+}
+
 func TestIssuePreprocessPersistsSwitchAndRecoversInterruptedTask(t *testing.T) {
 	s := testIssuePreprocessor(t)
 	if s.enabled() {
